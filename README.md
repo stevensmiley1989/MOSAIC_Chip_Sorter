@@ -1,5 +1,6 @@
 # MOSAIC_Chip_Sorter
 ## Repository by Steven Smiley 3/20/2022
+![MOSAIC_Chip_Sorter.py](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Main.png)
 MOSAIC_Chip_Sorter.py creates mosaics based on the PascalVOC XML annotation files (.xml) generated with labelImg 
 or whatever method made with respect to a corresponding JPEG (.jpg) image.  
 
