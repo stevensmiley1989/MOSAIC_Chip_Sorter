@@ -144,6 +144,7 @@ class MOSAIC:
             self.df['checked']=self.df['path_anno_i'].copy()
             self.df['checked']=''
         self.unique_labels={w:i for i,w in enumerate(self.df['label_i'].unique())}
+        self.clear_fix_bad()
     def draw(self):
         self.df_fix=self.df[self.df['checked']=='bad'].reset_index().drop('index',axis=1)
         self.unique_labels={w:i for i,w in enumerate(self.df['label_i'].unique())}
@@ -223,6 +224,16 @@ class MOSAIC:
             removed_all=[os.remove(os.path.join(self.path_JPEGImages_tofix_bbox,w)) for w in jpegs_to_fix_bbox if w[0]!='.']
         print('Annotations to fix = ',len(list(os.listdir(self.path_Annotations_tofix))))
         print('JPEGs to fix = ',len(list(os.listdir(self.path_JPEGImages_tofix))))
+    def clear_fix_bad(self):
+        annos_to_fix=os.listdir(self.path_Annotations_tofix)
+        if len(annos_to_fix)!=0:
+            removed_all=[os.remove(os.path.join(self.path_Annotations_tofix,w)) for w in annos_to_fix if w[0]=='.']
+        jpegs_to_fix=os.listdir(self.path_JPEGImages_tofix)
+        if len(jpegs_to_fix)!=0:
+            removed_all=[os.remove(os.path.join(self.path_JPEGImages_tofix,w)) for w in jpegs_to_fix if w[0]=='.']
+        jpegs_to_fix_bbox=os.listdir(self.path_JPEGImages_tofix_bbox)
+        if len(jpegs_to_fix_bbox)!=0:
+            removed_all=[os.remove(os.path.join(self.path_JPEGImages_tofix_bbox,w)) for w in jpegs_to_fix_bbox if w[0]=='.']
     def merge_df(self):
         self.Annotations_list_tofix=list(os.listdir(self.path_Annotations_tofix))
         self.Annotations_tofix=[os.path.join(self.path_Annotations_tofix,Anno) for Anno in self.Annotations_list_tofix if Anno.find('.xml')!=-1]

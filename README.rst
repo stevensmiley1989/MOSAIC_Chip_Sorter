@@ -1,4 +1,5 @@
-MOSAIC_Chip_Sorter
+# MOSAIC_Chip_Sorter
+## Repository by Steven Smiley
 ========
 '''
 Created by Steven Smiley 3/20/2022
