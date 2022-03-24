@@ -7,8 +7,8 @@ or whatever method made with respect to a corresponding JPEG (.jpg) image.
 MOSAIC_Chip_Sorter.py allows easy interfacing with annotation tool, labelImg.py (git clone https://github.com/tzutalin/labelImg.git).
 
 User can quickly find mislabeled objects and alter them on the fly.
-
-        'Step 1a. Open Annotations Folder ',                *required
+# STEPS 
+* [1. Step 1a. Open Annotations Folder](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step1.png),                *required
         'Step 1b. Open JPEGImages Folder',                  *required
         'Step 2. Create DF',                               *first time is a must, optional after.  This creates the pandas DataFrame (.pkl) of your annotations to sort/index with.  THIS MIGHT TAKE A WHILE DEPENDING ON DATA.
         'Step 3. Load DF',                                 *required.  This loads the pandas DataFrame (.pkl) file.
