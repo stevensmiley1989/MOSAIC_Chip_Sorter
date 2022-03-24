@@ -1,26 +1,9 @@
 # MOSAIC_Chip_Sorter
 ## Repository by Steven Smiley 3/20/2022
-
 MOSAIC_Chip_Sorter.py creates mosaics based on the PascalVOC XML annotation files (.xml) generated with labelImg 
 or whatever method made with respect to a corresponding JPEG (.jpg) image.  
 
 MOSAIC_Chip_Sorter.py allows easy interfacing with annotation tool, labelImg.py (git clone https://github.com/tzutalin/labelImg.git).
-
-User can quickly find mislabeled objects and alter them on the fly.
-| STEP| Description |
-|--------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [Step 1a. Open Annotations Folder](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step1.png)|* required|
-| [Step 1b. Open JPEGImages Folder](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step1.png)|* required|
-| [Step 2. Create DF](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step2.png)|                               *first time is a must, optional after.  This creates the pandas DataFrame (.pkl) of your annotations to sort/index with.  THIS MIGHT TAKE A WHILE DEPENDING ON DATA.
-        'Step 3. Load DF',                                 *required.  This loads the pandas DataFrame (.pkl) file.
-        'Step 4.  Analyze Target',                          *required.  This lets you pick which class to inspect and find bad labels
-        'Step 5.  move_fix',                                *required.  This must be done before using labelImg.
-        'Step 6.  Fix with labelImg.py',                    *optional.  This lets you fix the annotation associated with the image using labelImg.
-        'Step 7.  merge_fix'                                *optional.  This is what transfers fixed annotations over the existing annotation when you are satisified with Step 5.
-        'Step 8.  clear_fix',                               *optional.  You can use this after you have done Step 4 at anytime.
-        'Step 9.  clear_checked',                           #optional.  As you look through Mosaics, you won't see previous "checked" chips.  If you want to reset to see all, press this button.
-
-
 It is written in Python and uses Tkinter for its graphical interface.
 
 As chips are selected, their corresponding Annotation/JPEG files are put in new directories with "...to_fix".  These are used later with LabelImg.py or whatever label tool to update. 
@@ -62,7 +45,7 @@ Hotkeys
 +--------------------+--------------------------------------------+
 
 ~~~~~~~
-## 4 Contact-Info<a class="anchor" id="4"></a>
+## Contact-Info<a class="anchor" id="4"></a>
 
 Feel free to contact me to discuss any issues, questions, or comments.
 
@@ -71,7 +54,7 @@ Feel free to contact me to discuss any issues, questions, or comments.
 * LinkedIn: [stevensmiley1989](https://www.linkedin.com/in/stevensmiley1989)
 * Kaggle: [stevensmiley](https://www.kaggle.com/stevensmiley)
 
-### 5 License <a class="anchor" id="5"></a>
+### License <a class="anchor" id="5"></a>
 MIT License
 
 Copyright (c) 2022 Steven Smiley
@@ -95,3 +78,34 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 *I am providing code and resources in this repository to you under an open source license.  Because this is my personal repository, the license you receive to my code and resources is from me and not my employer. 
+
+
+User can quickly find mislabeled objects and alter them on the fly.
+| STEP| 
+|--------------------------------------------------------------------------------------------------------------|
+| ![1a.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step1.png)| 
+| ![1b.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step1.png)| 
+| ![2.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step2.png)| 
+| ![3.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step3.png)| 
+| ![4a.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step4a.png)|  
+| ![4b.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step4b.png)|  
+| ![4c.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step4c.png)|  
+| ![4d.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step4d.png)|  
+| ![4e.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step4e.png)|  
+| ![4f.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step4f.png)|  
+| ![4g.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step4g.png)|  
+| ![5a.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step5a.png)|
+| ![5b.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step5b.png)|
+| ![5c.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step5c.png)|
+| ![5d.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step5d.png)|
+| ![5e.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step5e.png)|
+| ![6a.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step6a.png)|
+| ![6b.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step6b.png)|
+| ![6c.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step6c.png)|
+| ![6d.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step6d.png)|
+| ![7a.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step7a.png)|
+| ![7b.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step7b.png)|
+| ![8.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step8.png)|
+| ![9.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step9.png)|
+
+
