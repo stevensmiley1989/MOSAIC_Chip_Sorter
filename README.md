@@ -105,7 +105,5 @@ User can quickly find mislabeled objects and alter them on the fly.
 | ![6d.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step6d.png)|
 | ![7a.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step7a.png)|
 | ![7b.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step7b.png)|
-| ![8.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step8.png)|
-| ![9.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step9.png)|
 
 
