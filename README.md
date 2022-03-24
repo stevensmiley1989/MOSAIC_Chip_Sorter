@@ -84,8 +84,7 @@ SOFTWARE.
 User can quickly find mislabeled objects and alter them on the fly.
 | STEPS| 
 |--------------------------------------------------------------------------------------------------------------|
-| ![1a.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step1.png)| 
-| ![1b.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step1.png)| 
+| ![1.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step1.png)| 
 | ![2.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step2.png)| 
 | ![3.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step3.png)| 
 | ![4a.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step4a.png)|  
