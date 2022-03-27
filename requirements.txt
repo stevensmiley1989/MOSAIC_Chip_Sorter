@@ -1,4 +1,4 @@
-lxml==4.6.3
+lxml==4.6.5
 tqdm==4.61.2
 matplotlib==3.4.2
 numpy==1.21.5
