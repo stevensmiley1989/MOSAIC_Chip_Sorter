@@ -20,6 +20,8 @@ User can quickly find mislabeled objects and alter them on the fly.
         'Step 7.  merge_fix'                                *optional.  This is what transfers fixed annotations over the existing annotation when you are satisified with Step 5.
         'Step 8.  clear_fix',                               *optional.  You can use this after you have done Step 4 at anytime.
         'Step 9.  clear_checked',                           #optional.  As you look through Mosaics, you won't see previous "checked" chips.  If you want to reset to see all, press this button.
+        'Step 10.  Breakup df',                             #optional.  If you want to use UMAP on over 1000 or so annotations at a time, then this will break it up in chunks of 1000 for easy sorting and merging later.
+        'Step 11.  UMAP',                                   #optional.  Lets you use UMAP to pick annotations out of the files to view in real-time.  You can add items you find to "fix" category.
 
 MOSAIC_Chip_Sorter is a graphical image annotation tool.
 
@@ -77,6 +79,13 @@ from tkinter import ttk
 from tkinter import filedialog as fd
 from tkinter.messagebox import showinfo
 from tkinter.tix import Balloon
+from skimage.metrics import structural_similarity as ssim
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+import seaborn as sns
+import umap 
+
+import cv2
 try:
     from libs import SAVED_SETTINGS as DEFAULT_SETTINGS
 except:
@@ -142,7 +151,7 @@ class MOSAIC:
             self.df[int_col]=self.df[int_col].astype(int)
         if 'checked' not in self.df.columns:
             self.df['checked']=self.df['path_anno_i'].copy()
-            self.df['checked']=''
+            self.df['checked']=''  
         self.unique_labels={w:i for i,w in enumerate(self.df['label_i'].unique())}
         self.clear_fix_bad()
     def draw(self):
@@ -349,18 +358,93 @@ class MOSAIC:
                 index_bad=self.df_i.iloc[self.dic[j]].name
                 if event.dblclick:
                     self.df.at[index_bad,'checked']="good" #resets
-                    #self.title_list[j].set_text(str(self.dic[j]))
+                    self.title_list[j].set_text(str(self.dic[j]))
                 else:
                     self.df.at[index_bad,'checked']="bad" #resets
-                    #self.title_list[j].set_text('{} = BAD'.format(self.dic[j]))
+                    self.title_list[j].set_text('{} = BAD'.format(self.dic[j]))
                 print(self.df.loc[index_bad])
                 plt.show()
                 plt.pause(1e-3)
                 break
         self.df.to_pickle(self.df_filename)
+    def onclick_show(self,event):
+        #global df_i,axes_list,df,title_list,img_list
+        print('%s click: button=%d, x=%d, y=%d, xdata=%f, ydata=%f' %
+             ('double' if event.dblclick else 'single', event.button,
+               event.x, event.y, event.xdata, event.ydata))
+        print('event.inaxes',event.inaxes)
+        if event.dblclick:
+            self.ex=event.xdata
+            self.ey=event.ydata
+            self.df_dist=self.df.drop(['umap_input'],axis=1).copy()
+            self.df_dist['distance']=self.df_dist['xmin'].copy()
+            self.df_dist['distance']=0.0
+            self.df_dist['distance']=self.df_dist['distance'].astype(np.float16)
+            self.df_dist=self.df_dist[(abs(self.df_dist['emb_X']-self.ex)<0.25) & (abs(self.df_dist['emb_Y']-self.ey)<0.25)]
+            self.df_dist['dx']=self.df_dist['emb_X'].copy()
+            self.df_dist['dy']=self.df_dist['emb_Y'].copy()
+            #for i,(x,y) in enumerate(zip(self.df['emb_X'],self.df['emb_Y'])):
+            
+            self.df_dist['dx']=self.ex-self.df_dist['emb_X']
+            self.df_dist['dy']=self.ey-self.df_dist['emb_Y']
+            self.df_dist['distance']=np.sqrt(self.df_dist['dx']**2+self.df_dist['dy']**2)
+            self.df_dist=self.df_dist.sort_values(by='distance',ascending=True)
+            #self.df.at[i,'distance']=np.sqrt(self.dx**2+self.dy**2)
+            #self.df_to_fix_i=self.df.sort_values(by='distance',ascending=True).copy()
+            self.index_bad=self.df_dist.iloc[0].name
+            print(self.df_dist.head())
+            self.image=Image.open(self.df_dist['path_jpeg_i'].iloc[0])
+            xmin=self.df_dist['xmin'].iloc[0]
+            xmax=self.df_dist['xmax'].iloc[0]
+            ymin=self.df_dist['ymin'].iloc[0]
+            ymax=self.df_dist['ymax'].iloc[0]
+            label_i=self.df_dist['label_i'].iloc[0]
+            draw=ImageDraw.Draw(self.image)
+            draw.rectangle([(xmin, ymin),
+                        (xmax, ymax)],
+                    outline=self.COLOR, width=3)
+            font = ImageFont.load_default()
+            draw.text((xmin + 4, ymin + 4),
+                '%s\n' % (label_i),
+                fill=self.COLOR, font=font)
+            cv2.imshow('Selected Image.  Press "f" to fix.  Press "q" to quit.',cv2.cvtColor(np.array(self.image),cv2.COLOR_BGR2RGB))
+            #while True:
+            self.k=cv2.waitKey(0) & 0xFF
+            if self.k==27:
+                cv2.destroyAllWindows()
+
+    def on_key_show(self,event):
+        print('you pressed', event.key, event.xdata, event.ydata)
+        if event.key=='n':
+            try:
+                cv2.destroyAllWindows()
+            except:
+                pass
+        if event.key=='q' or event.key=='escape':
+            plt.close('all')
+            try:
+                cv2.destroyAllWindows()
+            except:
+                pass
+            #del plt
+            #import matplotlib.pyplot as plt
+        if event.key=='f':
+            print('fixing it')
+            self.df.at[self.index_bad,'checked']="bad"
+            self.df.to_pickle(self.df_filename)
+            try:
+                cv2.destroyAllWindows()
+            except:
+                pass
+
+
+
     def look_at_target(self,target_i):
         self.target_i=target_i
+        if 'emb_X' in self.df.columns:
+            self.df=self.df.sort_values(['emb_X','emb_Y','label_dist'],ascending=[False,False,False]).reset_index().drop('index',axis=1)
         self.df_i=self.df[(self.df['label_i']==self.target_i) & (self.df['checked']=='')]
+
         print(len(self.df_i))
         
         for k in tqdm(range(1+int(np.ceil(len(self.df_i)//self.MOSAIC_NUM)))):
@@ -369,7 +453,7 @@ class MOSAIC:
                 break
             self.go_to_next=False
             self.axes_list=[]
-            #self.title_list=[]
+            self.title_list=[]
             self.img_list=[]
             self.dic={}
             if k==0:
@@ -396,6 +480,7 @@ class MOSAIC:
                 self.ymin_i=self.df_i['ymin'].iloc[i]
                 self.ymax_i=self.df_i['ymax'].iloc[i]
                 self.longest=max(self.ymax_i-self.ymin_i,self.xmax_i-self.xmin_i)
+              
                 try:
                     self.chip_i=self.jpg_i[self.ymin_i-5:self.ymin_i+self.longest+5,self.xmin_i-5:self.xmin_i+self.longest+5,:]
                     self.chip_square_i=Image.fromarray(self.chip_i)
@@ -409,13 +494,29 @@ class MOSAIC:
                 self.chip_square_i=self.chip_square_i.resize((self.W,self.H),Image.ANTIALIAS)
                 self.chip_square_i=np.array(self.chip_square_i)
                 self.df.at[self.df_i.iloc[i].name,'checked']='good'
+                if j==1:
+                    self.A_ind=self.df_i.iloc[i].name
+                    self.B_ind=self.df_i.iloc[i].name
+                    self.grayA=cv2.cvtColor(self.chip_square_i,cv2.COLOR_BGR2GRAY) 
+                    self.grayB=cv2.cvtColor(self.chip_square_i,cv2.COLOR_BGR2GRAY) 
+                else:
+                    self.A_ind=self.df_i.iloc[i-1].name
+                    self.B_ind=self.df_i.iloc[i].name  
+                    self.grayA=self.grayB
+                    self.grayB=cv2.cvtColor(self.chip_square_i,cv2.COLOR_BGR2GRAY) 
+                (self.score,self.diff)=ssim(self.grayA,self.grayB,full=True)
+                self.diff=(self.diff*255).astype("uint8")
+                  
                 self.axes_list.append(self.fig_i.add_subplot(self.DX,self.DY,i+1-self.start))
-                plt.subplots_adjust(wspace=0.1,hspace=0.1)
+                plt.subplots_adjust(wspace=0.2,hspace=0.5)
                 
                 self.img_list.append(self.chip_square_i)
                 plt.imshow(self.chip_square_i)
                 plt.axis('off')
-                #self.title_list.append(plt.title(i,fontsize='5',color='red'))
+                if self.score<0.20:
+                    self.title_list.append(plt.title("i={}, score={}%".format(i,int(100*np.round(self.score,2))),fontsize='5',color='red'))
+                else:
+                    self.title_list.append(plt.title("",fontsize='5',color='red'))
                 if i==len(self.df_i):
                     break
             plt.show()
@@ -423,18 +524,133 @@ class MOSAIC:
             #    time.sleep(0.1)
             #    pass
             self.df.to_pickle(self.df_filename)
+    def get_umap_input(self):
+        self.df=self.df.reset_index().drop('index',axis=1)
+        for i in tqdm(range(len(self.df))):
+            self.jpg_i=plt.imread(self.df['path_jpeg_i'].iloc[i])
+            self.xmin_i=self.df['xmin'].iloc[i]
+            self.xmax_i=self.df['xmax'].iloc[i]
+            self.ymin_i=self.df['ymin'].iloc[i]
+            self.ymax_i=self.df['ymax'].iloc[i]
+            self.longest=max(self.ymax_i-self.ymin_i,self.xmax_i-self.xmin_i)
+            try:
+                self.chip_i=self.jpg_i[self.ymin_i-5:self.ymin_i+self.longest+5,self.xmin_i-5:self.xmin_i+self.longest+5,:]
+                self.chip_square_i=Image.fromarray(self.chip_i)
+            except:
+                try:
+                    self.chip_i=self.jpg_i[self.ymin_i:self.ymin_i+self.longest,self.xmin_i:self.xmin_i+self.longest,:]
+                    self.chip_square_i=Image.fromarray(self.chip_i)
+                except:
+                    self.chip_i=self.jpg_i[self.ymin_i:self.ymax_i,self.xmin_i:self.xmax_i,:]
+                    self.chip_square_i=Image.fromarray(self.chip_i)                
+            self.chip_square_i=self.chip_square_i.resize((self.W,self.H),Image.ANTIALIAS)
+            self.chip_square_i=np.array(self.chip_square_i)
+            self.df.at[i,'umap_input']=self.chip_square_i
+        self.df.to_pickle(self.df_filename)
+    def breakup_df(self):
+        print(len(self.df))
+        self.SPLIT_NUM=1000
+        prefix_uniques=[w.split('/')[-1].split('.')[0] for w in self.df['path_anno_i'].unique()]
+        if len(self.df)<self.SPLIT_NUM:
+            self.SPLIT_NUM=len(self.df)
+        count=0
+        for i,(xml_i,jpeg_i) in tqdm(enumerate(zip(self.df['path_anno_i'],self.df['path_jpeg_i']))):
+            if count%self.SPLIT_NUM==0:
+                xml_list_i=[]
+                jpeg_list_i=[]
+                start_i=count
+                end_i=start_i+self.SPLIT_NUM-1
+                prefix_i=xml_i.split('/')[-1]
+                prefix_j=xml_i.replace(prefix_i,'').rstrip('/').split('/')[-1]
+                base_path_i=xml_i.replace(prefix_i,'').replace(prefix_j,'').rstrip('/')+'__SPLIT_NUM_{}'.format(self.SPLIT_NUM)
+                if os.path.exists(base_path_i)==False:
+                    os.makedirs(base_path_i)
+                new_path_i=os.path.join(base_path_i,"{}_{}".format(start_i,end_i))
+                if os.path.exists(new_path_i)==False:
+                    os.makedirs(new_path_i)
+                new_path_i_anno=os.path.join(new_path_i,'Annotations')
+                new_path_i_jpeg=os.path.join(new_path_i,'JPEGImages')
+                if os.path.exists(new_path_i_anno)==False:
+                    os.makedirs(new_path_i_anno)
+                if os.path.exists(new_path_i_jpeg)==False:
+                    os.makedirs(new_path_i_jpeg)
+            xml_list_i.append(xml_i)
+            jpeg_list_i.append(jpeg_i)
+            shutil.copy(xml_i,new_path_i_anno)
+            shutil.copy(jpeg_i,new_path_i_jpeg)
+            if (count+1)%self.SPLIT_NUM==0 or (count+1)==len(self.df):
+                if (count+1)==self.SPLIT_NUM:
+                    self.path_JPEGImages=new_path_i_jpeg
+                    self.path_Annotations=new_path_i_anno
+                df_i=self.df[self.df.path_anno_i.isin(xml_list_i)].copy()
+                df_i=df_i.reset_index().drop('index',axis=1)
+                df_i_filename=os.path.join(new_path_i,'df_{}.pkl'.format(new_path_i.split('/')[-1]))
+                df_i.to_pickle(df_i_filename)
+            count+=1
+    def get_umap_output(self):
+        self.df=self.df.dropna(axis=1)
+        if 'emb_X' not in self.df.columns:
+            if 'umap_input' not in self.df.columns:
+                self.df['umap_input']=self.df['path_anno_i'].copy()
+                self.df['umap_input']=''  
+                self.get_umap_input()
+            self.reducer=umap.UMAP(random_state=42)
+            self.flattened=[np.array(w).flatten() for w in self.df.umap_input]
+            self.reducer.fit(self.flattened)
+            self.embedding=self.reducer.transform(self.flattened)
+            self.df['emb_X']=self.df['label_i'].copy()
+            self.df['emb_Y']=self.df['label_i'].copy()
+            self.df['emb_X']=[w for w in self.embedding[:,0]]
+            self.df['emb_Y']=[w for w in self.embedding[:,1]]
+            self.df['emb_X']=self.df['emb_X'].astype(np.float16)
+            self.df['emb_Y']=self.df['emb_Y'].astype(np.float16)
+            self.label_dic={}
+            i=0
+            for label in self.df['label_i'].unique():
+                if label not in self.label_dic.keys():
+                    self.label_dic[label]=i
+                    i+=1
+
+            self.df['label_i_int']=self.df['label_i'].copy()
+            self.df['label_i_int']=[self.label_dic[w] for w in self.df['label_i']]
+            self.df['label_dist']=self.df['emb_X'].copy()
+            for row in tqdm(range(len(self.df))):
+                label_i=self.df.iloc[row].label_i
+                avg_X_i=self.df[self.df.label_i==label_i]['emb_X'].mean()
+                avg_Y_i=self.df[self.df.label_i==label_i]['emb_Y'].mean()
+                X_i=self.df.iloc[row].emb_X
+                Y_i=self.df.iloc[row].emb_Y
+                d_X_i=X_i-avg_X_i
+                d_Y_i=Y_i-avg_Y_i
+                dist_i=np.sqrt(d_X_i**2+d_Y_i**2)
+                self.df.at[row,'label_dist']=dist_i
+
+        self.df.to_pickle(self.df_filename)
+        self.fig_j=plt.figure(figsize=(self.FIGSIZE_W,self.FIGSIZE_H),num='UMAP.  "Double Click" to inspect.  Press "q" to quit.')
+        self.fig_j.set_size_inches((self.FIGSIZE_INCH_W, self.FIGSIZE_INCH_W))
+        self.cidj = self.fig_j.canvas.mpl_connect('button_press_event', self.onclick_show)
+        self.cidkj = self.fig_j.canvas.mpl_connect('key_press_event', self.on_key_show)
+        plt.rcParams['axes.facecolor'] = 'gray'
+        plt.grid(c='white')
+        plt.scatter(self.df['emb_X'],self.df['emb_Y'],c=self.df['label_i_int'],cmap='Spectral',s=5)
+        plt.gca().set_aspect('equal','datalim')
+        plt.colorbar(boundaries=np.arange(len(self.df['label_i_int'].unique())+1)-0.5).set_ticks(np.arange(len(self.df['label_i_int'].unique())))
+        plt.show()
+
 
 class App:
     def __init__(self):
         self.root=tk.Tk()
         self.root.bind('<Escape>',self.close)
         self.root.wm_iconphoto(False,ImageTk.PhotoImage(Image.open("resources/icons/appM.png")))
+        self.icon_breakup=ImageTk.PhotoImage(Image.open('resources/icons/breakup.png'))
         self.icon_folder=ImageTk.PhotoImage(Image.open("resources/icons/file.png"))
         self.icon_load=ImageTk.PhotoImage(Image.open('resources/icons/load.png'))
         self.icon_create=ImageTk.PhotoImage(Image.open('resources/icons/create.png'))
         self.icon_analyze=ImageTk.PhotoImage(Image.open('resources/icons/analyze.png'))
         self.icon_move=ImageTk.PhotoImage(Image.open('resources/icons/move.png'))
         self.icon_labelImg=ImageTk.PhotoImage(Image.open('resources/icons/labelImg.png'))
+        self.icon_map=ImageTk.PhotoImage(Image.open('resources/icons/map.png'))
         self.icon_merge=ImageTk.PhotoImage(Image.open('resources/icons/merge.png'))
         self.icon_clear_fix=ImageTk.PhotoImage(Image.open('resources/icons/clear.png'))
         self.icon_clear_checked=ImageTk.PhotoImage(Image.open('resources/icons/clear_checked.png'))
@@ -444,6 +660,7 @@ class App:
         self.path_labelImg=DEFAULT_SETTINGS.path_labelImg #r'/Volumes/One Touch/labelImg-Custom/labelImg.py'
         self.jpeg_selected=False #after  user has opened from folder dialog the jpeg folder, this returns True
         self.anno_selected=False #after user has opened from folder dialog the annotation folder, this returns True
+        self.create_move_Anno_JPEG()
         self.root_H=int(self.root.winfo_screenheight()*0.95)
         self.root_W=int(self.root.winfo_screenwidth()*0.95)
         self.root.geometry(str(self.root_W)+'x'+str(self.root_H))
@@ -455,6 +672,7 @@ class App:
         self.canvas_columnspan=DEFAULT_SETTINGS.canvas_columnspan
         self.canvas_rowspan=DEFAULT_SETTINGS.canvas_rowspan
         self.MOSAIC_NUM=DEFAULT_SETTINGS.MOSAIC_NUM
+        
         
         self.root_background_img=DEFAULT_SETTINGS.root_background_img #r"misc/gradient_blue.jpg"
         self.get_update_background_img()
@@ -475,23 +693,10 @@ class App:
         self.jpegs_to_fix_bbox_lable=None #os.listdir(self.path_JPEGImages_tofix_bbox)  
         self.MOSAIC=None
 
-        ######################################### Left Button ##############
-        self.left_button_texts=[
-        'Step 1a. Select Annotations Folder ',
-        'Step 1b. Select JPEGImages Folder',
-        'Step 2. Create DF',
-        'Step 3. Load DF',
-        'Step 4.  Analyze Target',
-        'Step 5.  move_fix',
-        'Step 6.  Fix with labelImg',
-        'Step 7.  merge_fix',
-        'Step 8.  clear_fix',
-        'Step 9.  clear_checked',
-]
-        #self.open_anno_label=None
+
         self.open_anno_label_var=tk.StringVar()
         self.open_anno_label_var.set(self.path_Annotations)
-        #text=self.left_button_texts[0]
+
         self.open_anno_button=Button(self.root,image=self.icon_folder,command=partial(self.select_folder,self.path_Annotations,'Open Annotations Folder',self.open_anno_label_var),bg=self.root_bg,fg=self.root_fg)
         self.open_anno_button.grid(row=2,column=1,sticky='se')
         self.open_anno_note=tk.Label(self.root,text="1.a \n Annotations dir",bg=self.root_bg,fg=self.root_fg,font=("Arial", 8))
@@ -499,13 +704,12 @@ class App:
 
         cmd_i=open_cmd+" '{}'".format(self.open_anno_label_var.get())
         self.open_anno_label=Button(self.root,textvariable=self.open_anno_label_var, command=partial(self.run_cmd,cmd_i),bg=self.root_fg,fg=self.root_bg,font=("Arial", 8))
-        #self.open_anno_label=tk.Label(self.root,textvariable=self.open_anno_label_var)
+
         self.open_anno_label.grid(row=2,column=2,columnspan=50,sticky='sw')
 
-        #self.open_jpeg_label=None
         self.open_jpeg_label_var=tk.StringVar()
         self.open_jpeg_label_var.set(self.path_JPEGImages)
-        #text=self.left_button_texts[1]
+
         self.open_jpeg_button=Button(self.root,image=self.icon_folder,command=partial(self.select_folder,self.path_JPEGImages,'Open JPEGImages Folder',self.open_jpeg_label_var),bg=self.root_bg,fg=self.root_fg)
         self.open_jpeg_button.grid(row=4,column=1,sticky='se')
         self.open_jpeg_note=tk.Label(self.root,text="1.b \n JPEGImages dir",bg=self.root_bg,fg=self.root_fg,font=("Arial", 8))
@@ -513,7 +717,7 @@ class App:
 
         cmd_i=open_cmd+" '{}'".format(self.open_jpeg_label_var.get())
         self.open_jpeg_label=Button(self.root,textvariable=self.open_jpeg_label_var, command=partial(self.run_cmd,cmd_i),bg=self.root_fg,fg=self.root_bg,font=("Arial", 8))
-        #self.open_jpeg_label=tk.Label(self.root,textvariable=self.open_jpeg_label_var)
+
         self.open_jpeg_label.grid(row=4,column=2,columnspan=50,sticky='sw')
         if os.path.exists(self.path_Annotations) and os.path.exists(self.path_JPEGImages):
             self.MOSAIC=MOSAIC(self.path_JPEGImages,self.path_Annotations)
@@ -534,6 +738,20 @@ class App:
         self.save_settings_note=tk.Label(self.root,text='Save Settings',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.save_settings_note.grid(row=23,column=1,sticky='ne')
 
+    def create_move_Anno_JPEG(self):
+        if self.path_Annotations.split('/')[-1]!="Annotations":
+            path_anno=os.path.join(self.path_Annotations,'Annotations')
+            if os.path.exists(path_anno)==False:
+                os.makedirs(path_anno)
+            [shutil.move(os.path.join(self.path_Annotations,w),path_anno) for w in os.listdir(self.path_Annotations) if w.find('.xml')!=-1]
+            self.path_Annotations=path_anno
+        if self.path_JPEGImages.split('/')[-1]!="JPEGImages":
+            path_jpegs=os.path.join(self.path_JPEGImages,'JPEGImages')
+            if os.path.exists(path_jpegs)==False:
+                os.makedirs(path_jpegs)
+            [shutil.move(os.path.join(self.path_JPEGImages,w),path_jpegs) for w in os.listdir(self.path_JPEGImages) if w.find('.jpg')!=-1]
+            self.path_JPEGImages=path_jpegs
+            
     def close(self,event):
         self.root.destroy()
 
@@ -790,14 +1008,37 @@ class App:
         self.clear_checked_button.grid(row=20,column=1,sticky='se')
         self.clear_checked_note=tk.Label(self.root,text='9. \n Clear Checked',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.clear_checked_note.grid(row=21,column=1,sticky='ne')
+
+        self.breakupDF_button=Button(self.root,image=self.icon_breakup,command=self.breakup_df,bg=self.root_bg,fg=self.root_fg)
+        self.breakupDF_button.grid(row=20,column=30,sticky='se')
+        self.breakupDF_note=tk.Label(self.root,text='10. \n Breakup df',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.breakupDF_note.grid(row=21,column=30,sticky='ne')
+
+        self.UMAP_button=Button(self.root,image=self.icon_map,command=self.umap_update,bg=self.root_bg,fg=self.root_fg)
+        self.UMAP_button.grid(row=20,column=31,sticky='se')
+        self.UMAP_note=tk.Label(self.root,text='11. \n UMAP',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.UMAP_note.grid(row=21,column=31,sticky='ne')
+
+    def breakup_df(self):
+        self.MOSAIC.breakup_df()
+        self.path_JPEGImages=self.MOSAIC.path_JPEGImages
+        self.path_Annotations=self.MOSAIC.path_Annotations
+        self.open_jpeg_label_var.set(self.path_JPEGImages)
+        self.open_anno_label_var.set(self.path_Annotations)
+        self.MOSAIC.load()
+        self.update_counts('na')
     def clear_checked(self):
         self.MOSAIC.clear_checked()
+        self.update_counts('na')
+    def umap_update(self):
+        self.MOSAIC.get_umap_output()
         self.update_counts('na')
     def move_fix(self):
         self.MOSAIC.move_fix()
         self.update_counts('na')
     def merge_fix(self):
         self.MOSAIC.merge_fix()
+        self.load_df()
         self.update_counts('na')
     def clear_fix(self):
         self.MOSAIC.clear_fix()
