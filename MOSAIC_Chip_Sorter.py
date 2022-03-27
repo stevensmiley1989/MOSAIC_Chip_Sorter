@@ -33,8 +33,8 @@ As chips are selected, their corresponding Annotation/JPEG files are put in new 
 Installation
 ------------------
 
-Ubuntu Linux/Mac
-^^^^^^^^^^^^
+Ubuntu Linux
+~~~~~~~
 
 Python 3 + Tkinter
 
@@ -42,16 +42,50 @@ Python 3 + Tkinter
 
     sudo pip3 install -r requirements.txt
     python3 MOSAIC_Chip_Sorter.py
-
-
-Hotkeys
 ~~~~~~~
 
+Mac
+~~~~~~~
+
+Python 3 + Tkinter
+
+.. code:: shell
+
+    sudo pip3 install -r requirements_Mac.txt
+    python3 MOSAIC_Chip_Sorter.py
+~~~~~~~
+
+Hotkeys
+------------------
+
+MOSAIC Hotkeys
+~~~~~~~
++--------------------+--------------------------------------------+
+| KEY                | DESCRIPTION                                |
 +--------------------+--------------------------------------------+
 | n                  | Next Batch of Images in Mosaics            |
 +--------------------+--------------------------------------------+
 | q                  | Close the Mosaic Images                    |
 +--------------------+--------------------------------------------+
+
+~~~~~~~
+
+
+UMAP Hotkeys
+~~~~~~~
++--------------------+--------------------------------------------+
+| KEY                | DESCRIPTION                                |
++--------------------+--------------------------------------------+
+| n                  | Closes inspected image if open.            |
++--------------------+--------------------------------------------+
+| f                  | Adds inspected image to the fix list.      |
++--------------------+--------------------------------------------+
+| q                  | Closes the window.                         |
++--------------------+--------------------------------------------+
+| Esc                | Closes the window.                         |
++--------------------+--------------------------------------------+
+
+~~~~~~~
 
 '''
 import sys
