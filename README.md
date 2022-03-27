@@ -105,5 +105,14 @@ User can quickly find mislabeled objects and alter them on the fly.
 | ![6d.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step6d.png)|
 | ![7a.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step7a.png)|
 | ![7b.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step7b.png)|
+| ![8a.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step8a.png)|
+| ![8b.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step8b.png)|
+| ![9a.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step9a.png)|
+| ![9b.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step9b.png)|
+| ![9c.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step9c.png)|
+| ![10a.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step10a.png)|
+| ![10b.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step10b.png)|
+| ![11a.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step11a.png)|
+| ![11b.](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Step11b.png)|
 
 
