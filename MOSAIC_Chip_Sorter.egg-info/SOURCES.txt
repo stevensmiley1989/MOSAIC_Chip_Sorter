@@ -1,7 +1,0 @@
-LICENSE
-README.md
-setup.py
-MOSAIC_Chip_Sorter.egg-info/PKG-INFO
-MOSAIC_Chip_Sorter.egg-info/SOURCES.txt
-MOSAIC_Chip_Sorter.egg-info/dependency_links.txt
-MOSAIC_Chip_Sorter.egg-info/top_level.txt
