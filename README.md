@@ -1,8 +1,8 @@
 # MOSAIC_Chip_Sorter
 ## Repository by Steven Smiley 3/20/2022
 ![MOSAIC_Chip_Sorter.py](https://github.com/stevensmiley1989/MOSAIC_Chip_Sorter/blob/main/misc/Main.png)
-MOSAIC_Chip_Sorter.py creates mosaics based on the PascalVOC XML annotation files (.xml) generated with labelImg 
-or whatever method made with respect to a corresponding JPEG (.jpg) image.  
+MOSAIC_Chip_Sorter.py is a labeling tool.  It creates clickable/fixable mosaics based on the PascalVOC XML annotation files (.xml) generated with labelImg 
+or whatever method made with respect to a corresponding JPEG (.jpg) image.  It also uses UMAP to cluster chips for fixing.   
 
 MOSAIC_Chip_Sorter.py allows easy interfacing with annotation tool, labelImg.py (git clone https://github.com/tzutalin/labelImg.git).
 It is written in Python and uses Tkinter for its graphical interface.
@@ -36,6 +36,9 @@ Python 3 + Tkinter
 ~~~~~~~
 
 Hotkeys
+------------------
+
+MOSAIC Hotkeys
 ~~~~~~~
 +--------------------+--------------------------------------------+
 | KEY                | DESCRIPTION                                |
@@ -43,6 +46,23 @@ Hotkeys
 | n                  | Next Batch of Images in Mosaics            |
 +--------------------+--------------------------------------------+
 | q                  | Close the Mosaic Images                    |
++--------------------+--------------------------------------------+
+
+~~~~~~~
+
+
+UMAP Hotkeys
+~~~~~~~
++--------------------+--------------------------------------------+
+| KEY                | DESCRIPTION                                |
++--------------------+--------------------------------------------+
+| n                  | Closes inspected image if open.            |
++--------------------+--------------------------------------------+
+| f                  | Adds inspected image to the fix list.      |
++--------------------+--------------------------------------------+
+| q                  | Closes the window.                         |
++--------------------+--------------------------------------------+
+| Esc                | Closes the window.                         |
 +--------------------+--------------------------------------------+
 
 ~~~~~~~
