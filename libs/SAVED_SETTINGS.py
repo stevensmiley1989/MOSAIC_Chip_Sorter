@@ -1,5 +1,5 @@
-path_JPEGImages=r'/Volumes/One Touch/CustomDroneVideo_mp4/IMG_4305_frames/MODEL_efficientdet1_VisDrone_efficientdet1_100epochs-1tpus-VisDrone_edgetpu/JPEGImages'
-path_Annotations=r'/Volumes/One Touch/CustomDroneVideo_mp4/IMG_4305_frames/MODEL_efficientdet1_VisDrone_efficientdet1_100epochs-1tpus-VisDrone_edgetpu/Annotations'
+path_JPEGImages=r'/Volumes/One Touch/CustomDroneVideo_mp4/IMG_4305_frames__SPLIT_NUM_253/0_252/JPEGImages'
+path_Annotations=r'/Volumes/One Touch/CustomDroneVideo_mp4/IMG_4305_frames__SPLIT_NUM_253/0_252/Annotations_Predicted_yolov4_tiny/Annotations'
 path_labelImg=r'/Volumes/One Touch/labelImg-Custom/labelImg.py'
 root_background_img=r'misc/gradient_green.jpg'
 predefined_classes='predefined_classes.txt'
@@ -9,7 +9,7 @@ JPG_EXT ='.jpg'
 PYTHON_PATH ='python3'
 W=100
 H=100
-MOSAIC_NUM=50
+MOSAIC_NUM=100
 FIGSIZE_W=50
 FIGSIZE_H=50
 FIGSIZE_INCH_W=8

@@ -3,8 +3,13 @@ MOSAIC_Chip_Sorter
 ========
 Created by Steven Smiley 3/20/2022
 
+MOSAIC_Chip_Sorter.py is a labeling annotation tool that allows one to identify & fix mislabeled annotation data (chips) in their dataset through the 
+use of MOSAICs and UMAP quickly. 
+
 MOSAIC_Chip_Sorter.py creates mosaics based on the PascalVOC XML annotation files (.xml) generated with labelImg 
 or whatever method made with respect to a corresponding JPEG (.jpg) image.  
+
+Uniform Manifold Approximation and Projection (UMAP, https://umap-learn.readthedocs.io/en/latest/) is a dimension reduction technique that can be used for visualization of the data into clusters.
 
 MOSAIC_Chip_Sorter.py allows easy interfacing with annotation tool, labelImg.py (git clone https://github.com/tzutalin/labelImg.git).
 
@@ -21,7 +26,7 @@ User can quickly find mislabeled objects and alter them on the fly.
         'Step 8.  clear_fix',                               *optional.  You can use this after you have done Step 4 at anytime.
         'Step 9.  clear_checked',                           #optional.  As you look through Mosaics, you won't see previous "checked" chips.  If you want to reset to see all, press this button.
         'Step 10.  Breakup df',                             #optional.  If you want to use UMAP on over 1000 or so annotations at a time, then this will break it up in chunks of 1000 for easy sorting and merging later.
-        'Step 11.  UMAP',                                   #optional.  Lets you use UMAP to pick annotations out of the files to view in real-time.  You can add items you find to "fix" category.
+        'Step 11.  UMAP',                                   #optional.  Lets you use UMAP to pick annotations out of the files to view in real-time.  You can add items you find to "fix" category.  Change labels or delete objects on the fly.
 
 MOSAIC_Chip_Sorter is a graphical image annotation tool.
 
@@ -118,7 +123,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 import seaborn as sns
 import umap 
-
+from pprint import pprint
 import cv2
 try:
     from libs import SAVED_SETTINGS as DEFAULT_SETTINGS
@@ -407,6 +412,11 @@ class MOSAIC:
              ('double' if event.dblclick else 'single', event.button,
                event.x, event.y, event.xdata, event.ydata))
         print('event.inaxes',event.inaxes)
+        try:
+            cv2.destroyWindow('Selected Image.  Press "f" to fix.  Press "q" to quit.')
+            cv2.destroyAllWindows()
+        except:
+            pass
         if event.dblclick:
             self.ex=event.xdata
             self.ey=event.ydata
@@ -438,14 +448,21 @@ class MOSAIC:
                         (xmax, ymax)],
                     outline=self.COLOR, width=3)
             font = ImageFont.load_default()
+            text_labels='Press "d" to delete annotation for this object.\n\n'
+            for label_j,int_i in self.label_dic.items():
+                text_labels+='Press "{}" to change label to "{}"\n'.format(int_i,label_j)
+            draw.text((0, 0),
+                text_labels,
+                fill='green', stroke_fill='blue',font=font)
             draw.text((xmin + 4, ymin + 4),
                 '%s\n' % (label_i),
                 fill=self.COLOR, font=font)
-            cv2.imshow('Selected Image.  Press "f" to fix.  Press "q" to quit.',cv2.cvtColor(np.array(self.image),cv2.COLOR_BGR2RGB))
-            #while True:
-            self.k=cv2.waitKey(0) & 0xFF
-            if self.k==27:
-                cv2.destroyAllWindows()
+            self.img_i=cv2.cvtColor(np.array(self.image),cv2.COLOR_BGR2RGB)
+
+            cv2.imshow('Selected Image.  Press "f" to fix.  Press "q" to quit.',self.img_i)
+            plt.show()
+
+
 
     def on_key_show(self,event):
         print('you pressed', event.key, event.xdata, event.ydata)
@@ -460,8 +477,6 @@ class MOSAIC:
                 cv2.destroyAllWindows()
             except:
                 pass
-            #del plt
-            #import matplotlib.pyplot as plt
         if event.key=='f':
             print('fixing it')
             self.df.at[self.index_bad,'checked']="bad"
@@ -470,7 +485,98 @@ class MOSAIC:
                 cv2.destroyAllWindows()
             except:
                 pass
-
+        if event.key=='d':
+            try:
+                print('deleting bounding box')
+                xmin=str(self.df['xmin'][self.index_bad])
+                xmax=str(self.df['xmax'][self.index_bad])
+                ymin=str(self.df['ymin'][self.index_bad])
+                ymax=str(self.df['ymax'][self.index_bad])
+                print('xmin',xmin)
+                print('xmax',xmax)
+                print('ymin',ymin)
+                print('ymax',ymax)
+                label_k=self.df['label_i'][self.index_bad]
+                path_anno_bad=self.df['path_anno_i'][self.index_bad]
+                f=open(path_anno_bad,'r')
+                f_read=f.readlines()
+                f.close()
+                f_new=[]
+                start_line=0
+                end_line=0
+                self.df.drop(self.index_bad,axis=0)
+                self.df=self.df.drop(self.index_bad,axis=0)
+                for ii,line in enumerate(f_read):
+                    if line.find(label_k)!=-1:
+                        print('found label_k',label_k)
+                        combo_i=f_read[ii-1:]
+                        combo_i="".join([w for w in combo_i])
+                        combo_i=combo_i.split('<object>')
+                        if combo_i[1].find(xmin)!=-1 and combo_i[1].find(xmax)!=-1 and combo_i[1].find(ymin)!=-1 and combo_i[1].find(ymax)!=-1:
+                            start_line=ii-1
+                            for jj,line_j in enumerate(f_read[ii:]):
+                                if line_j.find('</object>')!=-1:
+                                    end_line=jj+ii
+                            f_new.append(line)
+                        else:
+                            f_new.append(line)
+                    else:
+                        f_new.append(line)
+                f_new=f_new[:start_line]+f_new[end_line+1:]
+                f=open(path_anno_bad,'w')
+                [f.writelines(w) for w in f_new]
+                f.close()  
+                self.df.to_pickle(self.df_filename)
+                try:
+                    cv2.destroyAllWindows()
+                except:
+                    pass 
+            except:
+                print('This ship has sailed, item not found.')
+        for label_j,int_i in self.label_dic.items(): 
+            print('label_j',label_j,'int_i',int_i)
+            if event.key==str(int_i):
+                print('fixing label')
+                xmin=str(self.df['xmin'][self.index_bad])
+                xmax=str(self.df['xmax'][self.index_bad])
+                ymin=str(self.df['ymin'][self.index_bad])
+                ymax=str(self.df['ymax'][self.index_bad])
+                print('xmin',xmin)
+                print('xmax',xmax)
+                print('ymin',ymin)
+                print('ymax',ymax)
+                label_k=self.df['label_i'][self.index_bad]
+                self.df.at[self.index_bad,'label_i']=self.rev_label_dic[int_i]
+                self.df.at[self.index_bad,'label_i_int']=int_i
+                f=open(self.df['path_anno_i'][self.index_bad],'r')
+                f_read=f.readlines()
+                f.close()
+                f_new=[]
+                for ii,line in enumerate(f_read):
+                    if line.find(label_k)!=-1:
+                        print('found label_k',label_k)
+                        combo_i=f_read[ii-1:]
+                        combo_i="".join([w for w in combo_i])
+                        combo_i=combo_i.split('<object>')
+                        #pprint(combo_i)
+                        if combo_i[1].find(xmin)!=-1 and combo_i[1].find(xmax)!=-1 and combo_i[1].find(ymin)!=-1 and combo_i[1].find(ymax)!=-1:
+                            print('fixing it')
+                            print(line.replace(label_k,label_j))
+                            f_new.append(line.replace(label_k,label_j))
+                        else:
+                            f_new.append(line)
+                    else:
+                        f_new.append(line)
+                f=open(self.df['path_anno_i'][self.index_bad],'w')
+                [f.writelines(w) for w in f_new]
+                f.close()  
+                self.df.to_pickle(self.df_filename)
+                try:
+                    cv2.destroyAllWindows()
+                except:
+                    pass 
+                break    
+            
 
 
     def look_at_target(self,target_i):
@@ -515,16 +621,21 @@ class MOSAIC:
                 self.ymax_i=self.df_i['ymax'].iloc[i]
                 self.longest=max(self.ymax_i-self.ymin_i,self.xmax_i-self.xmin_i)
               
-                try:
-                    self.chip_i=self.jpg_i[self.ymin_i-5:self.ymin_i+self.longest+5,self.xmin_i-5:self.xmin_i+self.longest+5,:]
-                    self.chip_square_i=Image.fromarray(self.chip_i)
-                except:
-                    try:
-                        self.chip_i=self.jpg_i[self.ymin_i:self.ymin_i+self.longest,self.xmin_i:self.xmin_i+self.longest,:]
-                        self.chip_square_i=Image.fromarray(self.chip_i)
-                    except:
-                        self.chip_i=self.jpg_i[self.ymin_i:self.ymax_i,self.xmin_i:self.xmax_i,:]
-                        self.chip_square_i=Image.fromarray(self.chip_i)                
+                # try:
+                #     self.chip_i=self.jpg_i[self.ymin_i-5:self.ymin_i+self.longest+5,self.xmin_i-5:self.xmin_i+self.longest+5,:]
+                #     self.chip_square_i=Image.fromarray(self.chip_i)
+                # except:
+                #     try:
+                #         self.chip_i=self.jpg_i[self.ymin_i:self.ymin_i+self.longest,self.xmin_i:self.xmin_i+self.longest,:]
+                #         self.chip_square_i=Image.fromarray(self.chip_i)
+                #     except:
+                #         self.chip_i=self.jpg_i[self.ymin_i:self.ymax_i,self.xmin_i:self.xmax_i,:]
+                #         self.chip_square_i=Image.fromarray(self.chip_i)     
+
+                self.chip_i=self.jpg_i[self.ymin_i:self.ymax_i,self.xmin_i:self.xmax_i,:]
+                self.chip_square_i=Image.fromarray(self.chip_i) 
+
+
                 self.chip_square_i=self.chip_square_i.resize((self.W,self.H),Image.ANTIALIAS)
                 self.chip_square_i=np.array(self.chip_square_i)
                 self.df.at[self.df_i.iloc[i].name,'checked']='good'
@@ -567,16 +678,18 @@ class MOSAIC:
             self.ymin_i=self.df['ymin'].iloc[i]
             self.ymax_i=self.df['ymax'].iloc[i]
             self.longest=max(self.ymax_i-self.ymin_i,self.xmax_i-self.xmin_i)
-            try:
-                self.chip_i=self.jpg_i[self.ymin_i-5:self.ymin_i+self.longest+5,self.xmin_i-5:self.xmin_i+self.longest+5,:]
-                self.chip_square_i=Image.fromarray(self.chip_i)
-            except:
-                try:
-                    self.chip_i=self.jpg_i[self.ymin_i:self.ymin_i+self.longest,self.xmin_i:self.xmin_i+self.longest,:]
-                    self.chip_square_i=Image.fromarray(self.chip_i)
-                except:
-                    self.chip_i=self.jpg_i[self.ymin_i:self.ymax_i,self.xmin_i:self.xmax_i,:]
-                    self.chip_square_i=Image.fromarray(self.chip_i)                
+            # try:
+            #     self.chip_i=self.jpg_i[self.ymin_i-5:self.ymin_i+self.longest+5,self.xmin_i-5:self.xmin_i+self.longest+5,:]
+            #     self.chip_square_i=Image.fromarray(self.chip_i)
+            # except:
+            #     try:
+            #         self.chip_i=self.jpg_i[self.ymin_i:self.ymin_i+self.longest,self.xmin_i:self.xmin_i+self.longest,:]
+            #         self.chip_square_i=Image.fromarray(self.chip_i)
+            #     except:
+            #         self.chip_i=self.jpg_i[self.ymin_i:self.ymax_i,self.xmin_i:self.xmax_i,:]
+            #         self.chip_square_i=Image.fromarray(self.chip_i)    
+            self.chip_i=self.jpg_i[self.ymin_i:self.ymax_i,self.xmin_i:self.xmax_i,:]
+            self.chip_square_i=Image.fromarray(self.chip_i)              
             self.chip_square_i=self.chip_square_i.resize((self.W,self.H),Image.ANTIALIAS)
             self.chip_square_i=np.array(self.chip_square_i)
             self.df.at[i,'umap_input']=self.chip_square_i
@@ -658,7 +771,13 @@ class MOSAIC:
                 d_Y_i=Y_i-avg_Y_i
                 dist_i=np.sqrt(d_X_i**2+d_Y_i**2)
                 self.df.at[row,'label_dist']=dist_i
-
+        i=0
+        self.label_dic={}
+        for label in self.df['label_i'].unique():
+            if label not in self.label_dic.keys():
+                self.label_dic[label]=i
+                i+=1
+        self.rev_label_dic={v:k for k,v in self.label_dic.items()}
         self.df.to_pickle(self.df_filename)
         self.fig_j=plt.figure(figsize=(self.FIGSIZE_W,self.FIGSIZE_H),num='UMAP.  "Double Click" to inspect.  Press "q" to quit.')
         self.fig_j.set_size_inches((self.FIGSIZE_INCH_W, self.FIGSIZE_INCH_W))
@@ -667,14 +786,15 @@ class MOSAIC:
         plt.rcParams['axes.facecolor'] = 'gray'
         plt.grid(c='white')
         plt.scatter(self.df['emb_X'],self.df['emb_Y'],c=self.df['label_i_int'],cmap='Spectral',s=5)
-        plt.gca().set_aspect('equal','datalim')
+        self.gca=plt.gca()
+        self.gca.set_aspect('equal','datalim')
         plt.colorbar(boundaries=np.arange(len(self.df['label_i_int'].unique())+1)-0.5).set_ticks(np.arange(len(self.df['label_i_int'].unique())))
         plt.show()
 
 
 class App:
-    def __init__(self):
-        self.root=tk.Tk()
+    def __init__(self,root_tk):
+        self.root=root_tk
         self.root.bind('<Escape>',self.close)
         self.root.wm_iconphoto(False,ImageTk.PhotoImage(Image.open("resources/icons/appM.png")))
         self.icon_breakup=ImageTk.PhotoImage(Image.open('resources/icons/breakup.png'))
@@ -1099,7 +1219,8 @@ class App:
 
 
 if __name__=='__main__':
-    my_app=App()
+    root_tk=tk.Tk()
+    my_app=App(root_tk)
     my_app.root.mainloop()
 
 
