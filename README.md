@@ -44,7 +44,7 @@ Python 3 + Tkinter
 
 Tutorial
 ------------------
-![YouTube Tutorial](https://youtu.be/40NyVGdOVuA)
+# [YouTube Tutorial](https://youtu.be/40NyVGdOVuA)
 
 Hotkeys
 ------------------
