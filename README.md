@@ -41,6 +41,7 @@ Python 3 + Tkinter
     sudo pip3 install -r requirements_Mac.txt
     python3 MOSAIC_Chip_Sorter.py
 ~~~~~~~
+## [YouTube Tutorial](https://www.youtube.com/watch?v=40NyVGdOVuA&t=130s)
 
 Hotkeys
 ------------------
