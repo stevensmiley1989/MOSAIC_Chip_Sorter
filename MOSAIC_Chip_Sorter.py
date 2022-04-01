@@ -956,6 +956,24 @@ class App:
             self.fix_with_labelImg_error_button=Button(self.root,image=self.icon_folder, command=partial(self.select_file,self.path_labelImg),bg=self.root_bg,fg=self.root_fg)
             self.fix_with_labelImg_error_button.grid(row=14,column=2,sticky='s')
 
+    def open_originals_with_labelImg(self):
+        self.path_labelImg_image_dir=self.MOSAIC.path_JPEGImages
+        self.path_labelImg_predefined_classes_file=os.path.join(self.MOSAIC.basePath,self.predefined_classes)
+        f=open(self.path_labelImg_predefined_classes_file,'w')
+        [f.writelines(str(w)+'\n') for w in list(self.MOSAIC.unique_labels.keys())]
+        f.close()
+        self.path_labelImg_save_dir=self.MOSAIC.path_Annotations
+        if os.path.exists(self.path_labelImg):
+            self.cmd_i='{} "{}" "{}" "{}" "{}"'.format(self.PYTHON_PATH ,self.path_labelImg,self.path_labelImg_image_dir,self.path_labelImg_predefined_classes_file,self.path_labelImg_save_dir)
+            self.labelImg=Thread(target=self.run_cmd,args=(self.cmd_i,)).start()
+        else:
+            self.popup_text='Please provide a valid labelImg.py path. \n  Current path is: {}'.format(self.path_labelImg)
+            self.fix_with_labelImg_error=tk.Label(self.root,text=self.popup_text, bg=self.root_bg,fg=self.root_fg,font=("Arial", 8))
+            self.fix_with_labelImg_error.grid(row=23,column=32,sticky='s')
+            self.fix_with_labelImg_error_button=Button(self.root,image=self.icon_folder, command=partial(self.select_file,self.path_labelImg),bg=self.root_bg,fg=self.root_fg)
+            self.fix_with_labelImg_error_button.grid(row=22,column=32,sticky='s')
+
+
     def pad(self,text_i,max_i):
         while len(text_i)!=max_i:
             text_i=text_i+" "
@@ -1172,6 +1190,11 @@ class App:
         self.UMAP_button.grid(row=20,column=31,sticky='se')
         self.UMAP_note=tk.Label(self.root,text='11. \n UMAP',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.UMAP_note.grid(row=21,column=31,sticky='ne')
+
+        self.open_originals_with_labelImg_button=Button(self.root,image=self.icon_labelImg,command=self.open_originals_with_labelImg,bg=self.root_bg,fg=self.root_fg)
+        self.open_originals_with_labelImg_button.grid(row=20,column=32,sticky='se')
+        self.open_originals_with_labelImg_note=tk.Label(self.root,text='12. \n Open originals w/ labelImg.py',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.open_originals_with_labelImg_note.grid(row=21,column=32,sticky='ne')
 
     def breakup_df(self):
         self.MOSAIC.breakup_df()
