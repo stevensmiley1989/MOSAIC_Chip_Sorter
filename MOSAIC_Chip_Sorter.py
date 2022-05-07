@@ -89,6 +89,9 @@ UMAP Hotkeys
 +--------------------+--------------------------------------------+
 | Esc                | Closes the window.                         |
 +--------------------+--------------------------------------------+
++--------------------+--------------------------------------------+
+| m                  | Creates MOSAIC to fix labels of selected.   |
++--------------------+--------------------------------------------+
 
 ~~~~~~~
 
@@ -98,7 +101,10 @@ from sys import platform as _platform
 import pandas as pd
 from tqdm import tqdm
 import os
+import matplotlib
+matplotlib.rcParams['interactive'] == True
 import matplotlib.pyplot as plt
+
 from functools import partial
 from threading import Thread
 import shutil
@@ -134,12 +140,18 @@ if _platform=='darwin':
     import tkmacosx
     from tkmacosx import Button as Button
     open_cmd='open'
+    matplotlib.use('MacOSX')
 else:
     from tkinter import Button as Button
     if _platform.lower().find('linux')!=-1:
         open_cmd='xdg-open'
     else:
         open_cmd='start'
+root_tk=tk.Tk()
+ROOT_H=int(root_tk.winfo_screenheight()*0.95)
+ROOT_W=int(root_tk.winfo_screenwidth()*0.95)
+print('ROOT_H',ROOT_H)
+print('ROOT_W',ROOT_W)
 class MOSAIC:
     def __init__(self,path_JPEGImages,path_Annotations,df_filename=None):
         self.DEFAULT_ENCODING = DEFAULT_SETTINGS.DEFAULT_ENCODING #'utf-8'
@@ -170,6 +182,14 @@ class MOSAIC:
         self.total_not_checked=tk.StringVar()
         self.total_checked_good=tk.StringVar()
         self.total_checked_bad=tk.StringVar()
+        self.useSSIM=DEFAULT_SETTINGS.useSSIM
+        self.ROOT_H=ROOT_H
+        self.ROOT_W=ROOT_W
+        self.inspect_mosaic=False
+        self.close_window_mosaic=False
+        self.run_selection=None
+        self.ex2=None
+        self.ey2=None
 
         if os.path.exists(self.path_Annotations_tofix)==False:
             os.makedirs(self.path_Annotations_tofix)
@@ -403,9 +423,163 @@ class MOSAIC:
                     self.title_list[j].set_text('{} = BAD'.format(self.dic[j]))
                 print(self.df.loc[index_bad])
                 plt.show()
-                plt.pause(1e-3)
+                #plt.pause(1e-3)
                 break
         self.df.to_pickle(self.df_filename)
+    def onclick_select_mosaic(self,event):
+        #global df_i,axes_list,df,title_list,img_list
+        print('%s click: button=%d, x=%d, y=%d, xdata=%f, ydata=%f' %
+             ('double' if event.dblclick else 'single', event.button,
+               event.x, event.y, event.xdata, event.ydata))
+        print('event.inaxes',event.inaxes)
+        for j,ax_j in enumerate(self.axes_list):
+            if ax_j==event.inaxes:
+                print('subplot j=',j)
+                index_bad=self.df_i.iloc[self.dic[j]].name
+                
+                if event.dblclick:
+                    self.df_sample.at[index_bad,'selected']=True #selected is true
+                    self.title_list[j].set_text('{}'.format(self.df['label_i'][index_bad]))
+                    self.title_list[j].set_color('blue')
+                    if index_bad in self.selection_list.values():
+                        self.selection_list.pop(j)
+                else:
+                    self.df_sample.at[index_bad,'selected']=False #selected is false
+                    self.title_list[j].set_text('{} = SELECTED'.format(self.dic[j]))
+                    self.title_list[j].set_color('red')
+                    self.selection_list[j]=index_bad
+    
+                print(self.df_sample.loc[index_bad])
+                plt.show()
+                break
+        #self.df.to_pickle(self.df_filename) #TBD
+    def on_key_mosaic(self,event):
+        print('you pressed', event.key, event.xdata, event.ydata)
+        if event.key=='q':
+            self.inspect_mosaic=False
+            self.run_selection=None
+            #self.close_window_mosaic=True
+        else:
+            #plt.close('all')
+            if event.key=='n':
+                plt.close('all')
+                self.go_to_next=True
+                self.selection_list={}
+            if event.key=='d':
+                if len(self.selection_list)>0:
+                    for j,selection_i in self.selection_list.items():
+                        self.index_bad=selection_i
+                        try:
+                            print('deleting bounding box')
+                            xmin=str(self.df['xmin'][self.index_bad])
+                            xmax=str(self.df['xmax'][self.index_bad])
+                            ymin=str(self.df['ymin'][self.index_bad])
+                            ymax=str(self.df['ymax'][self.index_bad])
+                            print('xmin',xmin)
+                            print('xmax',xmax)
+                            print('ymin',ymin)
+                            print('ymax',ymax)
+                            label_k=self.df['label_i'][self.index_bad]
+                            path_anno_bad=self.df['path_anno_i'][self.index_bad]
+                            f=open(path_anno_bad,'r')
+                            f_read=f.readlines()
+                            f.close()
+                            f_new=[]
+                            start_line=0
+                            end_line=0
+                            self.df.drop(self.index_bad,axis=0)
+                            self.df=self.df.drop(self.index_bad,axis=0)
+                            for ii,line in enumerate(f_read):
+                                if line.find(label_k)!=-1:
+                                    print('found label_k',label_k)
+                                    combo_i=f_read[ii-1:]
+                                    combo_i="".join([w for w in combo_i])
+                                    combo_i=combo_i.split('<object>')
+                                    if combo_i[1].find(xmin)!=-1 and combo_i[1].find(xmax)!=-1 and combo_i[1].find(ymin)!=-1 and combo_i[1].find(ymax)!=-1:
+                                        start_line=ii-1
+                                        for jj,line_j in enumerate(f_read[ii:]):
+                                            if line_j.find('</object>')!=-1:
+                                                end_line=jj+ii
+                                        f_new.append(line)
+                                    else:
+                                        f_new.append(line)
+                                else:
+                                    f_new.append(line)
+                            f_new=f_new[:start_line]+f_new[end_line+1:]
+                            f=open(path_anno_bad,'w')
+                            [f.writelines(w) for w in f_new]
+                            f.close()  
+                            self.df.to_pickle(self.df_filename)
+                        except:
+                            print('This ship has sailed, item not found.')
+                        self.title_list[j].set_text('{} = DELETED'.format(self.dic[j]))
+                        self.title_list[j].set_color('black')
+                    plt.show()
+                self.selection_list={}
+            int_values=[str(w) for w in self.label_dic.values()]
+            if len(self.selection_list)>0 and event.key in int_values:
+                for j,selection_i in self.selection_list.items():
+                    self.index_bad=selection_i
+                    for label_j,int_i in self.label_dic.items(): 
+                        #print('label_j',label_j,'int_i',int_i)
+                        if event.key==str(int_i):
+                            print('fixing label')
+                            xmin=str(self.df['xmin'][self.index_bad])
+                            xmax=str(self.df['xmax'][self.index_bad])
+                            ymin=str(self.df['ymin'][self.index_bad])
+                            ymax=str(self.df['ymax'][self.index_bad])
+                            print('xmin',xmin)
+                            print('xmax',xmax)
+                            print('ymin',ymin)
+                            print('ymax',ymax)
+                            label_k=self.df['label_i'][self.index_bad]
+                            self.df.at[self.index_bad,'label_i']=self.rev_label_dic[int_i]
+                            self.df.at[self.index_bad,'label_i_int']=int_i
+                            f=open(self.df['path_anno_i'][self.index_bad],'r')
+                            f_read=f.readlines()
+                            f.close()
+                            f_new=[]
+                            for ii,line in enumerate(f_read):
+                                if line.find(label_k)!=-1:
+                                    print('found label_k',label_k)
+                                    combo_i=f_read[ii-1:]
+                                    combo_i="".join([w for w in combo_i])
+                                    combo_i=combo_i.split('<object>')
+                                    #pprint(combo_i)
+                                    if combo_i[1].find(xmin)!=-1 and combo_i[1].find(xmax)!=-1 and combo_i[1].find(ymin)!=-1 and combo_i[1].find(ymax)!=-1:
+                                        print('fixing it')
+                                        print(line.replace(label_k,label_j))
+                                        f_new.append(line.replace(label_k,label_j))
+                                    else:
+                                        f_new.append(line)
+                                else:
+                                    f_new.append(line)
+                            f=open(self.df['path_anno_i'][self.index_bad],'w')
+                            [f.writelines(w) for w in f_new]
+                            f.close()  
+                            self.df.to_pickle(self.df_filename)
+                            self.title_list[j].set_text('{}'.format(self.df['label_i'][self.index_bad]))
+                            self.title_list[j].set_color('green')
+                            break    
+                            plt.show()
+                self.selection_list={}
+            #self.df.to_pickle(self.df_filename) #TBD
+    def release_show(self,event):
+        #global df_i,axes_list,df,title_list,img_list
+        print('%s click: button=%d, x=%d, y=%d, xdata=%f, ydata=%f' %
+             ('double' if event.dblclick else 'single', event.button,
+               event.x, event.y, event.xdata, event.ydata))
+        if event.dblclick==False and self.inspect_mosaic==False:
+            print('event.inaxes',event.inaxes)   
+            print('x1:',self.ex)
+            print('y1:',self.ey)
+            self.ex2=event.xdata
+            self.ey2=event.ydata
+            print('x2:',self.ex2)
+            print('y2:',self.ey2)    
+
+        #self.df.at[i,'distance']=np.sqrt(self.dx**2+self.dy**2)
+        #self.df_to_fix_i=self.df.sort_values(by='distance',ascending=True).copy()
     def onclick_show(self,event):
         #global df_i,axes_list,df,title_list,img_list
         print('%s click: button=%d, x=%d, y=%d, xdata=%f, ydata=%f' %
@@ -417,6 +591,9 @@ class MOSAIC:
             cv2.destroyAllWindows()
         except:
             pass
+        if event.button:
+            self.ex=event.xdata
+            self.ey=event.ydata
         if event.dblclick:
             self.ex=event.xdata
             self.ey=event.ydata
@@ -458,6 +635,13 @@ class MOSAIC:
                 '%s\n' % (label_i),
                 fill=self.COLOR, font=font)
             self.img_i=cv2.cvtColor(np.array(self.image),cv2.COLOR_BGR2RGB)
+            self.img_i_H=self.img_i.shape[1]
+            self.img_i_W=self.img_i.shape[0]
+            self.img_i_W_ratio=self.ROOT_W/self.img_i_W
+            self.img_i_H_ratio=self.ROOT_H/self.img_i_H
+            self.img_i_new_W=int(0.85*self.img_i_W_ratio*self.img_i_W)
+            self.img_i_new_H=int(0.85*self.img_i_H_ratio*self.img_i_H)
+            self.img_i=cv2.resize(self.img_i,(self.img_i_new_W,self.img_i_new_H))
 
             cv2.imshow('Selected Image.  Press "f" to fix.  Press "q" to quit.',self.img_i)
             plt.show()
@@ -466,7 +650,7 @@ class MOSAIC:
 
     def on_key_show(self,event):
         print('you pressed', event.key, event.xdata, event.ydata)
-        if event.key=='n':
+        if event.key=='n' and self.inspect_mosaic==False:
             try:
                 cv2.destroyAllWindows()
             except:
@@ -477,6 +661,9 @@ class MOSAIC:
                 cv2.destroyAllWindows()
             except:
                 pass
+            self.inspect_mosaic=False
+            self.close_window_mosaic=True
+            self.run_selection=None
         if event.key=='f':
             print('fixing it')
             self.df.at[self.index_bad,'checked']="bad"
@@ -485,6 +672,19 @@ class MOSAIC:
                 cv2.destroyAllWindows()
             except:
                 pass
+        if event.key=='m' and self.ex2 and self.ey2:
+            self.df_sample=self.df.drop(['umap_input'],axis=1).copy()
+            #print(self.df_dist.head())
+            self.eymin=min(self.ey2,self.ey)
+            self.eymax=max(self.ey2,self.ey)
+            self.exmin=min(self.ex2,self.ex)
+            self.exmax=max(self.ex2,self.ex)
+            self.df_sample=self.df_sample[(self.df_sample['emb_X']>self.exmin) & (self.df_sample['emb_X']<self.exmax) & (self.df_sample['emb_Y']>self.eymin) & (self.df_sample['emb_Y']<self.eymax)]
+            print(self.df_sample)
+            self.inspect_mosaic=True
+            print('looking at selection')
+            self.run_selection=self.look_at_selection()
+            self.inspect_mosaic=False
         if event.key=='d':
             try:
                 print('deleting bounding box')
@@ -577,13 +777,88 @@ class MOSAIC:
                     pass 
                 break    
             
+    def look_at_selection(self):
 
+        # if 'emb_X' in self.df.columns:
+        #     self.df=self.df.sort_values(['emb_X','emb_Y','label_dist'],ascending=[False,False,False]).reset_index().drop('index',axis=1)
+        self.df_i=self.df_sample.copy()
+        self.selection_list={}
+
+        print(len(self.df_i))
+        
+        for k in tqdm(range(1+int(np.ceil(len(self.df_i)//self.MOSAIC_NUM)))):
+            print('self.close_window_mosaic==',self.close_window_mosaic)
+            if self.close_window_mosaic==True:
+                self.close_window_mosaic=False
+                break
+            self.go_to_next=False
+            self.axes_list=[]
+            self.title_list=[]
+            self.img_list=[]
+            self.dic={}
+            if k==0:
+                self.start=0
+                self.end=self.MOSAIC_NUM
+                if self.end>len(self.df_i):
+                    self.end=len(self.df_i)
+            else:
+                self.start=self.end
+                self.end=self.start+self.MOSAIC_NUM
+                if self.end>len(self.df_i):
+                    self.end=len(self.df_i)
+            self.fig_i=plt.figure(figsize=(self.FIGSIZE_W,self.FIGSIZE_H),num='Showing {}/{} chips.  Press "q" to quit.  Press "n" for next.'.format(self.end,len(self.df_i)))
+            self.fig_i.set_size_inches((self.FIGSIZE_INCH_W, self.FIGSIZE_INCH_W))
+            self.fig_i_cid = self.fig_i.canvas.mpl_connect('button_press_event', self.onclick_select_mosaic)
+            self.fig_i_cidk = self.fig_i.canvas.mpl_connect('key_press_event', self.on_key_mosaic)
+
+            j=0
+            for i in range(self.start,self.end):
+                self.dic[j]=i
+                j+=1
+                self.jpg_i=plt.imread(self.df_i['path_jpeg_i'].iloc[i])
+                self.xmin_i=self.df_i['xmin'].iloc[i]
+                self.xmax_i=self.df_i['xmax'].iloc[i]
+                self.ymin_i=self.df_i['ymin'].iloc[i]
+                self.ymax_i=self.df_i['ymax'].iloc[i]
+                self.longest=max(self.ymax_i-self.ymin_i,self.xmax_i-self.xmin_i)
+
+                self.chip_i=self.jpg_i[self.ymin_i:self.ymax_i,self.xmin_i:self.xmax_i,:]
+                self.chip_square_i=Image.fromarray(self.chip_i) 
+
+                self.chip_square_i=self.chip_square_i.resize((self.W,self.H),Image.ANTIALIAS)
+                self.chip_square_i=np.array(self.chip_square_i)
+                if j==1:
+                    self.A_ind=self.df_i.iloc[i].name
+                    self.B_ind=self.df_i.iloc[i].name
+                    self.grayA=cv2.cvtColor(self.chip_square_i,cv2.COLOR_BGR2GRAY) 
+                    self.grayB=cv2.cvtColor(self.chip_square_i,cv2.COLOR_BGR2GRAY) 
+                else:
+                    self.A_ind=self.df_i.iloc[i-1].name
+                    self.B_ind=self.df_i.iloc[i].name  
+                    self.grayA=self.grayB
+                    self.grayB=cv2.cvtColor(self.chip_square_i,cv2.COLOR_BGR2GRAY) 
+                  
+                self.axes_list.append(self.fig_i.add_subplot(self.DX,self.DY,i+1-self.start))
+                plt.subplots_adjust(wspace=0.2,hspace=0.5)
+                
+                self.img_list.append(self.chip_square_i)
+                plt.imshow(self.chip_square_i)
+                plt.axis('off')
+
+                self.title_list.append(plt.title(self.df_i.iloc[i].label_i,fontsize='5',color='blue'))
+                if i==len(self.df_i):
+                    break
+            plt.show()
+            #self.df.to_pickle(self.df_filename) #TBD
 
     def look_at_target(self,target_i):
         self.target_i=target_i
-        if 'emb_X' in self.df.columns:
-            self.df=self.df.sort_values(['emb_X','emb_Y','label_dist'],ascending=[False,False,False]).reset_index().drop('index',axis=1)
-        self.df_i=self.df[(self.df['label_i']==self.target_i) & (self.df['checked']=='')]
+        # if 'emb_X' in self.df.columns:
+        #     self.df=self.df.sort_values(['emb_X','emb_Y','label_dist'],ascending=[False,False,False]).reset_index().drop('index',axis=1)
+        if 'umap_input' in self.df.columns:
+            self.df_i=self.df[(self.df['label_i']==self.target_i) & (self.df['checked']=='')].drop('umap_input',axis=1)
+        else:
+            self.df_i=self.df[(self.df['label_i']==self.target_i) & (self.df['checked']=='')]
 
         print(len(self.df_i))
         
@@ -649,8 +924,9 @@ class MOSAIC:
                     self.B_ind=self.df_i.iloc[i].name  
                     self.grayA=self.grayB
                     self.grayB=cv2.cvtColor(self.chip_square_i,cv2.COLOR_BGR2GRAY) 
-                (self.score,self.diff)=ssim(self.grayA,self.grayB,full=True)
-                self.diff=(self.diff*255).astype("uint8")
+                if self.useSSIM:
+                    (self.score,self.diff)=ssim(self.grayA,self.grayB,full=True)
+                    self.diff=(self.diff*255).astype("uint8")
                   
                 self.axes_list.append(self.fig_i.add_subplot(self.DX,self.DY,i+1-self.start))
                 plt.subplots_adjust(wspace=0.2,hspace=0.5)
@@ -658,8 +934,11 @@ class MOSAIC:
                 self.img_list.append(self.chip_square_i)
                 plt.imshow(self.chip_square_i)
                 plt.axis('off')
-                if self.score<0.20:
-                    self.title_list.append(plt.title("i={}, score={}%".format(i,int(100*np.round(self.score,2))),fontsize='5',color='red'))
+                if self.useSSIM:
+                    if self.score<0.20:
+                        self.title_list.append(plt.title("i={}, score={}%".format(i,int(100*np.round(self.score,2))),fontsize='5',color='red'))
+                    else:
+                        self.title_list.append(plt.title("",fontsize='5',color='red'))
                 else:
                     self.title_list.append(plt.title("",fontsize='5',color='red'))
                 if i==len(self.df_i):
@@ -779,16 +1058,29 @@ class MOSAIC:
                 i+=1
         self.rev_label_dic={v:k for k,v in self.label_dic.items()}
         self.df.to_pickle(self.df_filename)
-        self.fig_j=plt.figure(figsize=(self.FIGSIZE_W,self.FIGSIZE_H),num='UMAP.  "Double Click" to inspect.  Press "q" to quit.')
+        self.fig_j=plt.figure(figsize=(self.FIGSIZE_W,self.FIGSIZE_H),num='UMAP.  "Double Click" to inspect.  Press "q" to quit.    Press "m" for MOSAIC.')
         self.fig_j.set_size_inches((self.FIGSIZE_INCH_W, self.FIGSIZE_INCH_W))
         self.cidj = self.fig_j.canvas.mpl_connect('button_press_event', self.onclick_show)
         self.cidkj = self.fig_j.canvas.mpl_connect('key_press_event', self.on_key_show)
+        self.cidkjm = self.fig_j.canvas.mpl_connect('button_release_event',self.release_show)
+        self.close_window_mosaic=False
+
         plt.rcParams['axes.facecolor'] = 'gray'
         plt.grid(c='white')
+        text_labels='Press "d" to delete annotation for this object.\n\n'
+        
+        for label_j,int_i in self.label_dic.items():
+            text_labels+='Press "{}" to change label to "{}"\n'.format(int_i,label_j)
+        plt.xlabel(text_labels)
         plt.scatter(self.df['emb_X'],self.df['emb_Y'],c=self.df['label_i_int'],cmap='Spectral',s=5)
+        self.ex=min(self.df['emb_X'])
+        self.ex2=max(self.df['emb_X'])
+        self.ey=min(self.df['emb_Y'])
+        self.ey2=max(self.df['emb_Y'])
         self.gca=plt.gca()
         self.gca.set_aspect('equal','datalim')
         plt.colorbar(boundaries=np.arange(len(self.df['label_i_int'].unique())+1)-0.5).set_ticks(np.arange(len(self.df['label_i_int'].unique())))
+        plt.tight_layout()
         plt.show()
 
 
@@ -826,6 +1118,7 @@ class App:
         self.canvas_columnspan=DEFAULT_SETTINGS.canvas_columnspan
         self.canvas_rowspan=DEFAULT_SETTINGS.canvas_rowspan
         self.MOSAIC_NUM=DEFAULT_SETTINGS.MOSAIC_NUM
+        self.useSSIM=DEFAULT_SETTINGS.useSSIM
         
         
         self.root_background_img=DEFAULT_SETTINGS.root_background_img #r"misc/gradient_blue.jpg"
@@ -1242,7 +1535,6 @@ class App:
 
 
 if __name__=='__main__':
-    root_tk=tk.Tk()
     my_app=App(root_tk)
     my_app.root.mainloop()
 
