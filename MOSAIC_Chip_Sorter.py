@@ -466,7 +466,7 @@ class MOSAIC:
                     self.img_i_new_W=int(0.85*self.img_i_W_ratio*self.img_i_W)
                     self.img_i_new_H=int(0.85*self.img_i_H_ratio*self.img_i_H)
                     self.img_i=cv2.resize(self.img_i,(self.img_i_new_W,self.img_i_new_H))
-                    cv2.imshow('Selected Image.  Press "q" to close window',self.img_i)
+                    cv2.imshow('Selected Image.  Press "x" to close window',self.img_i)
                     cv2.waitKey(0)
                     cv2.destroyAllWindows()
                     #plt.show()                    
