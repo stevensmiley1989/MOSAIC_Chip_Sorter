@@ -443,6 +443,33 @@ class MOSAIC:
                     self.title_list[j].set_color('blue')
                     if index_bad in self.selection_list.values():
                         self.selection_list.pop(j)
+                elif event.button==2:
+                    self.image=Image.open(self.df_sample['path_jpeg_i'].loc[index_bad])
+                    xmin=self.df_sample['xmin'].loc[index_bad]
+                    xmax=self.df_sample['xmax'].loc[index_bad]
+                    ymin=self.df_sample['ymin'].loc[index_bad]
+                    ymax=self.df_sample['ymax'].loc[index_bad]
+                    label_i=self.df_sample['label_i'].loc[index_bad]
+                    draw=ImageDraw.Draw(self.image)
+                    draw.rectangle([(xmin, ymin),
+                                (xmax, ymax)],
+                            outline=self.COLOR, width=3)
+                    font = ImageFont.load_default()
+                    draw.text((xmin + 4, ymin + 4),
+                        '%s\n' % (label_i),
+                        fill=self.COLOR, font=font)
+                    self.img_i=cv2.cvtColor(np.array(self.image),cv2.COLOR_BGR2RGB)
+                    self.img_i_H=self.img_i.shape[1]
+                    self.img_i_W=self.img_i.shape[0]
+                    self.img_i_W_ratio=self.ROOT_W/self.img_i_W
+                    self.img_i_H_ratio=self.ROOT_H/self.img_i_H
+                    self.img_i_new_W=int(0.85*self.img_i_W_ratio*self.img_i_W)
+                    self.img_i_new_H=int(0.85*self.img_i_H_ratio*self.img_i_H)
+                    self.img_i=cv2.resize(self.img_i,(self.img_i_new_W,self.img_i_new_H))
+                    cv2.imshow('Selected Image.  Press "q" to close window',self.img_i)
+                    cv2.waitKey(0)
+                    cv2.destroyAllWindows()
+                    #plt.show()                    
                 else:
                     self.df_sample.at[index_bad,'selected']=False #selected is false
                     self.title_list[j].set_text('{} = SELECTED'.format(self.dic[j]))
