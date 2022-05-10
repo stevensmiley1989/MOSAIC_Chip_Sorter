@@ -458,6 +458,7 @@ class MOSAIC:
         if event.key=='q':
             self.inspect_mosaic=False
             self.run_selection=None
+            self.close_window_mosaic=True
             #self.close_window_mosaic=True
         else:
             #plt.close('all')
@@ -656,13 +657,13 @@ class MOSAIC:
             except:
                 pass
         if event.key=='q' or event.key=='escape':
+            self.close_window_mosaic=False
             plt.close('all')
             try:
                 cv2.destroyAllWindows()
             except:
                 pass
             self.inspect_mosaic=False
-            self.close_window_mosaic=True
             self.run_selection=None
         if event.key=='f':
             print('fixing it')
@@ -787,9 +788,14 @@ class MOSAIC:
         print(len(self.df_i))
         
         for k in tqdm(range(1+int(np.ceil(len(self.df_i)//self.MOSAIC_NUM)))):
+            while self.go_to_next==False and k!=0 and self.close_window_mosaic==False and self.inspect_mosaic==True:
+                time.sleep(1)
+                #waiting until can proceed
             print('self.close_window_mosaic==',self.close_window_mosaic)
             if self.close_window_mosaic==True:
                 self.close_window_mosaic=False
+                break
+            if self.go_to_next==False and k!=0:
                 break
             self.go_to_next=False
             self.axes_list=[]
