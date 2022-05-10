@@ -444,6 +444,7 @@ class MOSAIC:
                     if index_bad in self.selection_list.values():
                         self.selection_list.pop(j)
                 elif event.button==2:
+                    cv2.destroyAllWindows()
                     self.image=Image.open(self.df_sample['path_jpeg_i'].loc[index_bad])
                     xmin=self.df_sample['xmin'].loc[index_bad]
                     xmax=self.df_sample['xmax'].loc[index_bad]
@@ -466,10 +467,10 @@ class MOSAIC:
                     self.img_i_new_W=int(0.85*self.img_i_W_ratio*self.img_i_W)
                     self.img_i_new_H=int(0.85*self.img_i_H_ratio*self.img_i_H)
                     self.img_i=cv2.resize(self.img_i,(self.img_i_new_W,self.img_i_new_H))
-                    cv2.imshow('Selected Image.  Press "x" to close window',self.img_i)
-                    cv2.waitKey(0)
-                    cv2.destroyAllWindows()
-                    #plt.show()                    
+                    cv2.imshow('Selected Image.  Press "q" to close window',self.img_i)
+                    #cv2.waitKey(0)
+                    #cv2.destroyAllWindows()
+                    plt.show()                    
                 else:
                     self.df_sample.at[index_bad,'selected']=False #selected is false
                     self.title_list[j].set_text('{} = SELECTED'.format(self.dic[j]))
@@ -486,6 +487,7 @@ class MOSAIC:
             self.inspect_mosaic=False
             self.run_selection=None
             self.close_window_mosaic=True
+            cv2.destroyAllWindows()
             #self.close_window_mosaic=True
         else:
             #plt.close('all')
@@ -615,7 +617,7 @@ class MOSAIC:
                event.x, event.y, event.xdata, event.ydata))
         print('event.inaxes',event.inaxes)
         try:
-            cv2.destroyWindow('Selected Image.  Press "f" to fix.  Press "q" to quit.')
+            #cv2.destroyWindow('Selected Image.  Press "f" to fix.  Press "q" to quit.')
             cv2.destroyAllWindows()
         except:
             pass
