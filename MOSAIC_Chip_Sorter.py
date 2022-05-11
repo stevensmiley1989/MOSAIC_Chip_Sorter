@@ -484,10 +484,15 @@ class MOSAIC:
     def on_key_mosaic(self,event):
         print('you pressed', event.key, event.xdata, event.ydata)
         if event.key=='q':
+            plt.close('all')
             self.inspect_mosaic=False
             self.run_selection=None
             self.close_window_mosaic=True
             cv2.destroyAllWindows()
+            self.draw_umap()
+
+
+
             #self.close_window_mosaic=True
         else:
             #plt.close('all')
@@ -600,13 +605,23 @@ class MOSAIC:
              ('double' if event.dblclick else 'single', event.button,
                event.x, event.y, event.xdata, event.ydata))
         if event.dblclick==False and self.inspect_mosaic==False:
-            print('event.inaxes',event.inaxes)   
-            print('x1:',self.ex)
-            print('y1:',self.ey)
+            #print('event.inaxes',event.inaxes)   
+            #print('x1:',self.ex)
+            #print('y1:',self.ey)
             self.ex2=event.xdata
             self.ey2=event.ydata
-            print('x2:',self.ex2)
-            print('y2:',self.ey2)    
+            #print('x2:',self.ex2)
+            #print('y2:',self.ey2) 
+            self.df_sample=self.df.drop(['umap_input'],axis=1).copy()
+            self.eymin=min(self.ey2,self.ey)
+            self.eymax=max(self.ey2,self.ey)
+            self.exmin=min(self.ex2,self.ex)
+            self.exmax=max(self.ex2,self.ex)
+            self.df_sample=self.df_sample[(self.df_sample['emb_X']>self.exmin) & (self.df_sample['emb_X']<self.exmax) & (self.df_sample['emb_Y']>self.eymin) & (self.df_sample['emb_Y']<self.eymax)]
+            print('Total number in this region is: {} \n'.format(len(self.df_sample)))
+            self.a_xmin, self.a_xmax, self.a_ymin, self.a_ymax = plt.axis()
+            print(self.a_xmin, self.a_xmax, self.a_ymin, self.a_ymax)
+
 
         #self.df.at[i,'distance']=np.sqrt(self.dx**2+self.dy**2)
         #self.df_to_fix_i=self.df.sort_values(by='distance',ascending=True).copy()
@@ -680,6 +695,14 @@ class MOSAIC:
 
     def on_key_show(self,event):
         print('you pressed', event.key, event.xdata, event.ydata)
+        if event.key=='h':
+            plt.close('all')
+            self.inspect_mosaic=False
+            self.run_selection=None
+            self.close_window_mosaic=True
+            cv2.destroyAllWindows()
+            del self.a_xmin,self.a_xmax,self.a_ymin,self.a_ymax
+            self.draw_umap()        
         if event.key=='n' and self.inspect_mosaic==False:
             try:
                 cv2.destroyAllWindows()
@@ -710,11 +733,13 @@ class MOSAIC:
             self.exmin=min(self.ex2,self.ex)
             self.exmax=max(self.ex2,self.ex)
             self.df_sample=self.df_sample[(self.df_sample['emb_X']>self.exmin) & (self.df_sample['emb_X']<self.exmax) & (self.df_sample['emb_Y']>self.eymin) & (self.df_sample['emb_Y']<self.eymax)]
-            print(self.df_sample)
+            print(len(self.df_sample))
             self.inspect_mosaic=True
+            self.close_window_mosaic=False
             print('looking at selection')
+            self.k=0
             self.run_selection=self.look_at_selection()
-            self.inspect_mosaic=False
+            #self.inspect_mosaic=False
         if event.key=='d':
             try:
                 print('deleting bounding box')
@@ -813,34 +838,27 @@ class MOSAIC:
         #     self.df=self.df.sort_values(['emb_X','emb_Y','label_dist'],ascending=[False,False,False]).reset_index().drop('index',axis=1)
         self.df_i=self.df_sample.copy()
         self.selection_list={}
-
+        DX=int(np.ceil(np.sqrt(len(self.df_i))))
+        DY=int(np.ceil(np.sqrt(len(self.df_i))))
         print(len(self.df_i))
         
-        for k in tqdm(range(1+int(np.ceil(len(self.df_i)//self.MOSAIC_NUM)))):
-            while self.go_to_next==False and k!=0 and self.close_window_mosaic==False and self.inspect_mosaic==True:
-                time.sleep(1)
-                #waiting until can proceed
+        for _ in tqdm(range(1+int(np.ceil(len(self.df_i)//len(self.df_i))))):
             print('self.close_window_mosaic==',self.close_window_mosaic)
             if self.close_window_mosaic==True:
                 self.close_window_mosaic=False
                 break
-            if self.go_to_next==False and k!=0:
+            if self.go_to_next==False and self.k!=0:
                 break
             self.go_to_next=False
             self.axes_list=[]
             self.title_list=[]
             self.img_list=[]
             self.dic={}
-            if k==0:
-                self.start=0
-                self.end=self.MOSAIC_NUM
-                if self.end>len(self.df_i):
-                    self.end=len(self.df_i)
-            else:
-                self.start=self.end
-                self.end=self.start+self.MOSAIC_NUM
-                if self.end>len(self.df_i):
-                    self.end=len(self.df_i)
+
+            self.start=0#self.end
+            self.end=self.start+len(self.df_i)#self.MOSAIC_NUM
+            if self.end>len(self.df_i):
+                self.end=len(self.df_i)
             self.fig_i=plt.figure(figsize=(self.FIGSIZE_W,self.FIGSIZE_H),num='Showing {}/{} chips.  Press "q" to quit.  Press "n" for next.'.format(self.end,len(self.df_i)))
             self.fig_i.set_size_inches((self.FIGSIZE_INCH_W, self.FIGSIZE_INCH_W))
             self.fig_i_cid = self.fig_i.canvas.mpl_connect('button_press_event', self.onclick_select_mosaic)
@@ -873,7 +891,7 @@ class MOSAIC:
                     self.grayA=self.grayB
                     self.grayB=cv2.cvtColor(self.chip_square_i,cv2.COLOR_BGR2GRAY) 
                   
-                self.axes_list.append(self.fig_i.add_subplot(self.DX,self.DY,i+1-self.start))
+                self.axes_list.append(self.fig_i.add_subplot(DX,DY,i+1-self.start))
                 plt.subplots_adjust(wspace=0.2,hspace=0.5)
                 
                 self.img_list.append(self.chip_square_i)
@@ -884,6 +902,7 @@ class MOSAIC:
                 if i==len(self.df_i):
                     break
             plt.show()
+            self.k+=1
             #self.df.to_pickle(self.df_filename) #TBD
 
     def look_at_target(self,target_i):
@@ -1048,6 +1067,45 @@ class MOSAIC:
                 df_i_filename=os.path.join(new_path_i,'df_{}.pkl'.format(new_path_i.split('/')[-1]))
                 df_i.to_pickle(df_i_filename)
             count+=1
+    def draw_umap(self):
+        i=0
+        self.label_dic={}
+        for label in self.df['label_i'].unique():
+            if label not in self.label_dic.keys():
+                self.label_dic[label]=i
+                i+=1
+        self.rev_label_dic={v:k for k,v in self.label_dic.items()}
+        self.df.to_pickle(self.df_filename)
+        self.fig_j=plt.figure(figsize=(self.FIGSIZE_W,self.FIGSIZE_H),num='UMAP.  "Double Click" to inspect.  Press "q" to quit.    Press "m" for MOSAIC.')
+        self.fig_j.set_size_inches((self.FIGSIZE_INCH_W, self.FIGSIZE_INCH_W))
+        self.cidj = self.fig_j.canvas.mpl_connect('button_press_event', self.onclick_show)
+        self.cidkj = self.fig_j.canvas.mpl_connect('key_press_event', self.on_key_show)
+        self.cidkjm = self.fig_j.canvas.mpl_connect('button_release_event',self.release_show)
+        self.close_window_mosaic=False
+
+        plt.rcParams['axes.facecolor'] = 'gray'
+        plt.grid(c='white')
+        text_labels='Press "d" to delete annotation for this object.\n\n'
+        
+        for label_j,int_i in self.label_dic.items():
+            text_labels+='Press "{}" to change label to "{}"\n'.format(int_i,label_j)
+        plt.xlabel(text_labels)
+        plt.scatter(self.df['emb_X'],self.df['emb_Y'],c=self.df['label_i_int'],cmap='Spectral',s=5)
+        self.ex=min(self.df['emb_X'])
+        self.ex2=max(self.df['emb_X'])
+        self.ey=min(self.df['emb_Y'])
+        self.ey2=max(self.df['emb_Y'])
+        self.gca=plt.gca()
+        self.gca.set_aspect('equal','datalim')
+        try:
+            plt.xlim([self.a_xmin,self.a_xmax])
+            plt.ylim([self.a_ymin,self.a_ymax])
+            plt.ylabel('Press "h" to zoom out')
+        except:
+            pass
+        plt.colorbar(boundaries=np.arange(len(self.df['label_i_int'].unique())+1)-0.5).set_ticks(np.arange(len(self.df['label_i_int'].unique())))
+        plt.tight_layout()
+        plt.show()
     def get_umap_output(self):
         self.df=self.df.dropna(axis=1)
         if 'emb_X' not in self.df.columns:
@@ -1085,38 +1143,8 @@ class MOSAIC:
                 d_Y_i=Y_i-avg_Y_i
                 dist_i=np.sqrt(d_X_i**2+d_Y_i**2)
                 self.df.at[row,'label_dist']=dist_i
-        i=0
-        self.label_dic={}
-        for label in self.df['label_i'].unique():
-            if label not in self.label_dic.keys():
-                self.label_dic[label]=i
-                i+=1
-        self.rev_label_dic={v:k for k,v in self.label_dic.items()}
-        self.df.to_pickle(self.df_filename)
-        self.fig_j=plt.figure(figsize=(self.FIGSIZE_W,self.FIGSIZE_H),num='UMAP.  "Double Click" to inspect.  Press "q" to quit.    Press "m" for MOSAIC.')
-        self.fig_j.set_size_inches((self.FIGSIZE_INCH_W, self.FIGSIZE_INCH_W))
-        self.cidj = self.fig_j.canvas.mpl_connect('button_press_event', self.onclick_show)
-        self.cidkj = self.fig_j.canvas.mpl_connect('key_press_event', self.on_key_show)
-        self.cidkjm = self.fig_j.canvas.mpl_connect('button_release_event',self.release_show)
-        self.close_window_mosaic=False
-
-        plt.rcParams['axes.facecolor'] = 'gray'
-        plt.grid(c='white')
-        text_labels='Press "d" to delete annotation for this object.\n\n'
+        self.draw_umap()
         
-        for label_j,int_i in self.label_dic.items():
-            text_labels+='Press "{}" to change label to "{}"\n'.format(int_i,label_j)
-        plt.xlabel(text_labels)
-        plt.scatter(self.df['emb_X'],self.df['emb_Y'],c=self.df['label_i_int'],cmap='Spectral',s=5)
-        self.ex=min(self.df['emb_X'])
-        self.ex2=max(self.df['emb_X'])
-        self.ey=min(self.df['emb_Y'])
-        self.ey2=max(self.df['emb_Y'])
-        self.gca=plt.gca()
-        self.gca.set_aspect('equal','datalim')
-        plt.colorbar(boundaries=np.arange(len(self.df['label_i_int'].unique())+1)-0.5).set_ticks(np.arange(len(self.df['label_i_int'].unique())))
-        plt.tight_layout()
-        plt.show()
 
 
 class App:
