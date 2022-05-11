@@ -27,7 +27,9 @@ User can quickly find mislabeled objects and alter them on the fly.
         'Step 9.  clear_checked',                           #optional.  As you look through Mosaics, you won't see previous "checked" chips.  If you want to reset to see all, press this button.
         'Step 10.  Breakup df',                             #optional.  If you want to use UMAP on over 1000 or so annotations at a time, then this will break it up in chunks of 1000 for easy sorting and merging later.
         'Step 11.  UMAP',                                   #optional.  Lets you use UMAP to pick annotations out of the files to view in real-time.  You can add items you find to "fix" category.  Change labels or delete objects on the fly.
-
+        'Step 12.  Open Originals with LabelIMG;
+        'Step 13.  Plot DX vs DY;
+        'Step 14.  Filter by DX & DY;
 MOSAIC_Chip_Sorter is a graphical image annotation tool.
 
 It is written in Python and uses Tkinter for its graphical interface.
@@ -183,6 +185,7 @@ class MOSAIC:
         self.total_checked_good=tk.StringVar()
         self.total_checked_bad=tk.StringVar()
         self.useSSIM=DEFAULT_SETTINGS.useSSIM
+        self.plotting_dx_dy=False
         self.ROOT_H=ROOT_H
         self.ROOT_W=ROOT_W
         self.inspect_mosaic=False
@@ -210,9 +213,58 @@ class MOSAIC:
             self.df[int_col]=self.df[int_col].astype(int)
         if 'checked' not in self.df.columns:
             self.df['checked']=self.df['path_anno_i'].copy()
-            self.df['checked']=''  
+            self.df['checked']='' 
+        if 'DX' not in self.df.columns:
+            self.df['DX']=self.df.xmax-self.df.xmin
+        if 'DY' not in self.df.columns:
+            self.df['DY']=self.df.ymax-self.df.ymin
         self.unique_labels={w:i for i,w in enumerate(self.df['label_i'].unique())}
         self.clear_fix_bad()
+        self.DX_MIN=min(self.df.DX)
+        self.DX_MAX=max(self.df.DX)
+        self.DY_MIN=min(self.df.DY)
+        self.DY_MAX=max(self.df.DY)
+        print(self.DX_MIN)
+        print(self.DX_MAX)
+        print(self.DY_MIN)
+        print(self.DY_MAX)
+        i=0
+        self.label_dic={}
+        for label in self.df['label_i'].unique():
+            if label not in self.label_dic.keys():
+                self.label_dic[label]=i
+                i+=1
+        self.df['label_i_int']=self.df['label_i'].copy()
+        self.df['label_i_int']=[self.label_dic[w] for w in self.df['label_i']]
+        
+    def plot_dx_dy(self):
+        self.plotting_dx_dy=True
+        self.fig_k=plt.figure(figsize=(self.FIGSIZE_W,self.FIGSIZE_H),num='BBOX SCATTER PLOT of SIZES.  "Double Click" to inspect.  Press "q" to quit.    Press "m" for MOSAIC.')
+        self.fig_k.set_size_inches((self.FIGSIZE_INCH_W, self.FIGSIZE_INCH_W))
+        self.cidj = self.fig_k.canvas.mpl_connect('button_press_event', self.onclick_show_dxdy)
+        self.cidkj = self.fig_k.canvas.mpl_connect('key_press_event', self.on_key_show_dxdy)
+        self.cidkjm = self.fig_k.canvas.mpl_connect('button_release_event',self.release_show_dxdy)
+        self.close_window_mosaic=False
+
+        plt.rcParams['axes.facecolor'] = 'gray'
+        plt.grid(c='white')
+        xaxis_labels='XMAX- XMIN\n\n'
+        
+        for label_j,int_i in self.label_dic.items():
+            xaxis_labels+='"{}" == "{}"\n'.format(int_i,label_j)
+        plt.xlabel(xaxis_labels)
+        plt.ylabel('YMAX-YMIN')
+        plt.scatter(self.df.DX,self.df.DY,c=self.df['label_i_int'],cmap='Spectral',s=5)
+        self.gca=plt.gca()
+        self.gca.set_aspect('equal','datalim')
+        plt.colorbar(boundaries=np.arange(len(self.df['label_i_int'].unique())+1)-0.5).set_ticks(np.arange(len(self.df['label_i_int'].unique())))
+        plt.tight_layout()
+        plt.show()
+    def filter_dxdy(self,DX_MIN,DX_MAX,DY_MIN,DY_MAX):
+        self.df=self.df[(self.df['DX']>=DX_MIN) & (self.df['DX']<=DX_MAX) & (self.df['DY']>=self.DY_MIN) & (self.df['DY']<=DY_MAX)].reset_index().drop('index',axis=1)
+
+
+
     def draw(self):
         self.df_fix=self.df[self.df['checked']=='bad'].reset_index().drop('index',axis=1)
         self.unique_labels={w:i for i,w in enumerate(self.df['label_i'].unique())}
@@ -489,7 +541,10 @@ class MOSAIC:
             self.run_selection=None
             self.close_window_mosaic=True
             cv2.destroyAllWindows()
-            self.draw_umap()
+            if self.plotting_dx_dy==False:
+                self.draw_umap()
+            else:
+                self.plot_dx_dy()
 
 
 
@@ -612,7 +667,10 @@ class MOSAIC:
             self.ey2=event.ydata
             #print('x2:',self.ex2)
             #print('y2:',self.ey2) 
-            self.df_sample=self.df.drop(['umap_input'],axis=1).copy()
+            if 'umap_input' in self.df.columns:
+                self.df_sample=self.df.drop(['umap_input'],axis=1).copy()
+            else:
+                self.df_sample=self.df.copy()
             self.eymin=min(self.ey2,self.ey)
             self.eymax=max(self.ey2,self.ey)
             self.exmin=min(self.ex2,self.ex)
@@ -621,10 +679,103 @@ class MOSAIC:
             print('Total number in this region is: {} \n'.format(len(self.df_sample)))
             self.a_xmin, self.a_xmax, self.a_ymin, self.a_ymax = plt.axis()
             print(self.a_xmin, self.a_xmax, self.a_ymin, self.a_ymax)
+    def release_show_dxdy(self,event):
+        #global df_i,axes_list,df,title_list,img_list
+        print('%s click: button=%d, x=%d, y=%d, xdata=%f, ydata=%f' %
+             ('double' if event.dblclick else 'single', event.button,
+               event.x, event.y, event.xdata, event.ydata))
+        if event.dblclick==False and self.inspect_mosaic==False:
+            #print('event.inaxes',event.inaxes)   
+            #print('x1:',self.ex)
+            #print('y1:',self.ey)
+            self.ex2=event.xdata
+            self.ey2=event.ydata
+            #print('x2:',self.ex2)
+            #print('y2:',self.ey2) 
+            if 'umap_input' in self.df.columns:
+                self.df_sample=self.df.drop(['umap_input'],axis=1).copy()
+            else:
+                self.df_sample=self.df.copy()
+            self.eymin=min(self.ey2,self.ey)
+            self.eymax=max(self.ey2,self.ey)
+            self.exmin=min(self.ex2,self.ex)
+            self.exmax=max(self.ex2,self.ex)
+            self.df_sample=self.df_sample[(self.df_sample['DX']>self.exmin) & (self.df_sample['DX']<self.exmax) & (self.df_sample['DY']>self.eymin) & (self.df_sample['DY']<self.eymax)]
+            print('Total number in this region is: {} \n'.format(len(self.df_sample)))
+            self.a_xmin, self.a_xmax, self.a_ymin, self.a_ymax = plt.axis()
+            print(self.a_xmin, self.a_xmax, self.a_ymin, self.a_ymax)
 
 
         #self.df.at[i,'distance']=np.sqrt(self.dx**2+self.dy**2)
         #self.df_to_fix_i=self.df.sort_values(by='distance',ascending=True).copy()
+    def onclick_show_dxdy(self,event):
+        #global df_i,axes_list,df,title_list,img_list
+        print('%s click: button=%d, x=%d, y=%d, xdata=%f, ydata=%f' %
+             ('double' if event.dblclick else 'single', event.button,
+               event.x, event.y, event.xdata, event.ydata))
+        print('event.inaxes',event.inaxes)
+        try:
+            #cv2.destroyWindow('Selected Image.  Press "f" to fix.  Press "q" to quit.')
+            cv2.destroyAllWindows()
+        except:
+            pass
+        if event.button:
+            self.ex=event.xdata
+            self.ey=event.ydata
+        if event.dblclick:
+            self.ex=event.xdata
+            self.ey=event.ydata
+            if 'umap_input' in self.df.columns:
+                self.df_dist=self.df.drop(['umap_input'],axis=1).copy()
+            else:
+                self.df_dist=self.df.copy()
+            self.df_dist['distance']=self.df_dist['xmin'].copy()
+            self.df_dist['distance']=0.0
+            self.df_dist['distance']=self.df_dist['distance'].astype(np.float16)
+            self.df_dist=self.df_dist[(abs(self.df_dist['DX']-self.ex)<2) & (abs(self.df_dist['DY']-self.ey)<2)]
+            self.df_dist['dx']=self.df_dist['DX'].copy()
+            self.df_dist['dy']=self.df_dist['DY'].copy()
+            #for i,(x,y) in enumerate(zip(self.df['emb_X'],self.df['emb_Y'])):
+            
+            self.df_dist['dx']=self.ex-self.df_dist['dx']
+            self.df_dist['dy']=self.ey-self.df_dist['dy']
+            self.df_dist['distance']=np.sqrt(self.df_dist['dx']**2+self.df_dist['dy']**2)
+            self.df_dist=self.df_dist.sort_values(by='distance',ascending=True)
+            #self.df.at[i,'distance']=np.sqrt(self.dx**2+self.dy**2)
+            #self.df_to_fix_i=self.df.sort_values(by='distance',ascending=True).copy()
+            self.index_bad=self.df_dist.iloc[0].name
+            print(self.df_dist.head())
+            self.image=Image.open(self.df_dist['path_jpeg_i'].iloc[0])
+            xmin=self.df_dist['xmin'].iloc[0]
+            xmax=self.df_dist['xmax'].iloc[0]
+            ymin=self.df_dist['ymin'].iloc[0]
+            ymax=self.df_dist['ymax'].iloc[0]
+            label_i=self.df_dist['label_i'].iloc[0]
+            draw=ImageDraw.Draw(self.image)
+            draw.rectangle([(xmin, ymin),
+                        (xmax, ymax)],
+                    outline=self.COLOR, width=3)
+            font = ImageFont.load_default()
+            text_labels='Press "d" to delete annotation for this object.\n\n'
+            for label_j,int_i in self.label_dic.items():
+                text_labels+='Press "{}" to change label to "{}"\n'.format(int_i,label_j)
+            draw.text((0, 0),
+                text_labels,
+                fill='green', stroke_fill='blue',font=font)
+            draw.text((xmin + 4, ymin + 4),
+                '%s\n' % (label_i),
+                fill=self.COLOR, font=font)
+            self.img_i=cv2.cvtColor(np.array(self.image),cv2.COLOR_BGR2RGB)
+            self.img_i_H=self.img_i.shape[1]
+            self.img_i_W=self.img_i.shape[0]
+            self.img_i_W_ratio=self.ROOT_W/self.img_i_W
+            self.img_i_H_ratio=self.ROOT_H/self.img_i_H
+            self.img_i_new_W=int(0.85*self.img_i_W_ratio*self.img_i_W)
+            self.img_i_new_H=int(0.85*self.img_i_H_ratio*self.img_i_H)
+            self.img_i=cv2.resize(self.img_i,(self.img_i_new_W,self.img_i_new_H))
+
+            cv2.imshow('Selected Image.  Press "f" to fix.  Press "q" to quit.',self.img_i)
+            plt.show()
     def onclick_show(self,event):
         #global df_i,axes_list,df,title_list,img_list
         print('%s click: button=%d, x=%d, y=%d, xdata=%f, ydata=%f' %
@@ -691,7 +842,148 @@ class MOSAIC:
             cv2.imshow('Selected Image.  Press "f" to fix.  Press "q" to quit.',self.img_i)
             plt.show()
 
-
+    def on_key_show_dxdy(self,event):
+        print('you pressed', event.key, event.xdata, event.ydata)
+        if event.key=='h':
+            plt.close('all')
+            self.inspect_mosaic=False
+            self.run_selection=None
+            self.close_window_mosaic=True
+            cv2.destroyAllWindows()
+            del self.a_xmin,self.a_xmax,self.a_ymin,self.a_ymax
+            self.plot_dx_dy()       
+        if event.key=='n' and self.inspect_mosaic==False:
+            try:
+                cv2.destroyAllWindows()
+            except:
+                pass
+        if event.key=='q' or event.key=='escape':
+            self.close_window_mosaic=False
+            self.plotting_dx_dy=False
+            plt.close('all')
+            try:
+                cv2.destroyAllWindows()
+            except:
+                pass
+            self.inspect_mosaic=False
+            self.run_selection=None
+        if event.key=='f':
+            print('fixing it')
+            self.df.at[self.index_bad,'checked']="bad"
+            self.df.to_pickle(self.df_filename)
+            try:
+                cv2.destroyAllWindows()
+            except:
+                pass
+        if event.key=='m' and self.ex2 and self.ey2:
+            if 'umap_input' in self.df.columns:
+                self.df_sample=self.df.drop(['umap_input'],axis=1).copy()
+            else:
+                self.df_sample=self.df.copy()
+            #print(self.df_dist.head())
+            self.eymin=min(self.ey2,self.ey)
+            self.eymax=max(self.ey2,self.ey)
+            self.exmin=min(self.ex2,self.ex)
+            self.exmax=max(self.ex2,self.ex)
+            self.df_sample=self.df_sample[(self.df_sample['DX']>self.exmin) & (self.df_sample['DX']<self.exmax) & (self.df_sample['DY']>self.eymin) & (self.df_sample['DY']<self.eymax)]
+            print(len(self.df_sample))
+            self.inspect_mosaic=True
+            self.close_window_mosaic=False
+            print('looking at selection')
+            self.k=0
+            self.run_selection=self.look_at_selection()
+            #self.inspect_mosaic=False
+        if event.key=='d':
+            try:
+                print('deleting bounding box')
+                xmin=str(self.df['xmin'][self.index_bad])
+                xmax=str(self.df['xmax'][self.index_bad])
+                ymin=str(self.df['ymin'][self.index_bad])
+                ymax=str(self.df['ymax'][self.index_bad])
+                print('xmin',xmin)
+                print('xmax',xmax)
+                print('ymin',ymin)
+                print('ymax',ymax)
+                label_k=self.df['label_i'][self.index_bad]
+                path_anno_bad=self.df['path_anno_i'][self.index_bad]
+                f=open(path_anno_bad,'r')
+                f_read=f.readlines()
+                f.close()
+                f_new=[]
+                start_line=0
+                end_line=0
+                self.df.drop(self.index_bad,axis=0)
+                self.df=self.df.drop(self.index_bad,axis=0)
+                for ii,line in enumerate(f_read):
+                    if line.find(label_k)!=-1:
+                        print('found label_k',label_k)
+                        combo_i=f_read[ii-1:]
+                        combo_i="".join([w for w in combo_i])
+                        combo_i=combo_i.split('<object>')
+                        if combo_i[1].find(xmin)!=-1 and combo_i[1].find(xmax)!=-1 and combo_i[1].find(ymin)!=-1 and combo_i[1].find(ymax)!=-1:
+                            start_line=ii-1
+                            for jj,line_j in enumerate(f_read[ii:]):
+                                if line_j.find('</object>')!=-1:
+                                    end_line=jj+ii
+                            f_new.append(line)
+                        else:
+                            f_new.append(line)
+                    else:
+                        f_new.append(line)
+                f_new=f_new[:start_line]+f_new[end_line+1:]
+                f=open(path_anno_bad,'w')
+                [f.writelines(w) for w in f_new]
+                f.close()  
+                self.df.to_pickle(self.df_filename)
+                try:
+                    cv2.destroyAllWindows()
+                except:
+                    pass 
+            except:
+                print('This ship has sailed, item not found.')
+        for label_j,int_i in self.label_dic.items(): 
+            print('label_j',label_j,'int_i',int_i)
+            if event.key==str(int_i):
+                print('fixing label')
+                xmin=str(self.df['xmin'][self.index_bad])
+                xmax=str(self.df['xmax'][self.index_bad])
+                ymin=str(self.df['ymin'][self.index_bad])
+                ymax=str(self.df['ymax'][self.index_bad])
+                print('xmin',xmin)
+                print('xmax',xmax)
+                print('ymin',ymin)
+                print('ymax',ymax)
+                label_k=self.df['label_i'][self.index_bad]
+                self.df.at[self.index_bad,'label_i']=self.rev_label_dic[int_i]
+                self.df.at[self.index_bad,'label_i_int']=int_i
+                f=open(self.df['path_anno_i'][self.index_bad],'r')
+                f_read=f.readlines()
+                f.close()
+                f_new=[]
+                for ii,line in enumerate(f_read):
+                    if line.find(label_k)!=-1:
+                        print('found label_k',label_k)
+                        combo_i=f_read[ii-1:]
+                        combo_i="".join([w for w in combo_i])
+                        combo_i=combo_i.split('<object>')
+                        #pprint(combo_i)
+                        if combo_i[1].find(xmin)!=-1 and combo_i[1].find(xmax)!=-1 and combo_i[1].find(ymin)!=-1 and combo_i[1].find(ymax)!=-1:
+                            print('fixing it')
+                            print(line.replace(label_k,label_j))
+                            f_new.append(line.replace(label_k,label_j))
+                        else:
+                            f_new.append(line)
+                    else:
+                        f_new.append(line)
+                f=open(self.df['path_anno_i'][self.index_bad],'w')
+                [f.writelines(w) for w in f_new]
+                f.close()  
+                self.df.to_pickle(self.df_filename)
+                try:
+                    cv2.destroyAllWindows()
+                except:
+                    pass 
+                break  
 
     def on_key_show(self,event):
         print('you pressed', event.key, event.xdata, event.ydata)
@@ -842,7 +1134,7 @@ class MOSAIC:
         DY=int(np.ceil(np.sqrt(len(self.df_i))))
         print(len(self.df_i))
         
-        for _ in tqdm(range(1+int(np.ceil(len(self.df_i)//len(self.df_i))))):
+        for _ in tqdm(range(1)):
             print('self.close_window_mosaic==',self.close_window_mosaic)
             if self.close_window_mosaic==True:
                 self.close_window_mosaic=False
@@ -1164,6 +1456,8 @@ class App:
         self.icon_clear_fix=ImageTk.PhotoImage(Image.open('resources/icons/clear.png'))
         self.icon_clear_checked=ImageTk.PhotoImage(Image.open('resources/icons/clear_checked.png'))
         self.icon_save_settings=ImageTk.PhotoImage(Image.open('resources/icons/save.png'))
+        self.icon_scatter=ImageTk.PhotoImage(Image.open('resources/icons/scatter.png'))
+        self.icon_filter=ImageTk.PhotoImage(Image.open('resources/icons/filter.png'))
         self.path_JPEGImages=DEFAULT_SETTINGS.path_JPEGImages #r'/Volumes/One Touch/Images_gdrive/Drone_Images/Training/JPEGImages'
         self.path_Annotations=DEFAULT_SETTINGS.path_Annotations #r'/Volumes/One Touch/Images_gdrive/Drone_Images/Training/Annotations'
         self.path_labelImg=DEFAULT_SETTINGS.path_labelImg #r'/Volumes/One Touch/labelImg-Custom/labelImg.py'
@@ -1552,6 +1846,54 @@ class App:
         self.open_originals_with_labelImg_note=tk.Label(self.root,text='12. \n Open originals w/ labelImg.py',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.open_originals_with_labelImg_note.grid(row=21,column=32,sticky='ne')
 
+        self.DX_MIN_VAR=tk.StringVar()
+        self.DX_MIN_VAR.set(str(self.MOSAIC.DX_MIN))
+        self.DX_MIN_entry=tk.Entry(self.root,textvariable=self.DX_MIN_VAR)
+        self.DX_MIN_entry.grid(row=5,column=30,sticky='sw')
+        self.DX_MIN_label=tk.Label(self.root,text='DX_MIN',bg=self.root_bg,fg=self.root_fg,font=('Arial',7))
+        self.DX_MIN_label.grid(row=6,column=30,sticky='nw')
+
+        self.DX_MAX_VAR=tk.StringVar()
+        self.DX_MAX_VAR.set(str(self.MOSAIC.DX_MAX))
+        self.DX_MAX_entry=tk.Entry(self.root,textvariable=self.DX_MAX_VAR)
+        self.DX_MAX_entry.grid(row=7,column=30,sticky='sw')
+        self.DX_MAX_label=tk.Label(self.root,text='DX_MAX',bg=self.root_bg,fg=self.root_fg,font=('Arial',7))
+        self.DX_MAX_label.grid(row=8,column=30,sticky='nw')
+
+        self.DY_MIN_VAR=tk.StringVar()
+        self.DY_MIN_VAR.set(str(self.MOSAIC.DY_MIN))
+        self.DY_MIN_entry=tk.Entry(self.root,textvariable=self.DY_MIN_VAR)
+        self.DY_MIN_entry.grid(row=9,column=30,sticky='sw')
+        self.DY_MIN_label=tk.Label(self.root,text='DY_MIN',bg=self.root_bg,fg=self.root_fg,font=('Arial',7))
+        self.DY_MIN_label.grid(row=10,column=30,sticky='nw')
+
+        self.DY_MAX_VAR=tk.StringVar()
+        self.DY_MAX_VAR.set(str(self.MOSAIC.DY_MAX))
+        self.DY_MAX_entry=tk.Entry(self.root,textvariable=self.DY_MAX_VAR)
+        self.DY_MAX_entry.grid(row=11,column=30,sticky='sw')
+        self.DY_MAX_label=tk.Label(self.root,text='DY_MAX',bg=self.root_bg,fg=self.root_fg,font=('Arial',7))
+        self.DY_MAX_label.grid(row=12,column=30,sticky='nw')
+
+        self.plot_DXDY_button=Button(self.root,image=self.icon_scatter,command=self.MOSAIC.plot_dx_dy,bg=self.root_bg,fg=self.root_fg)
+        self.plot_DXDY_button.grid(row=5,column=31,sticky='se')
+        self.plot_DXDY_note=tk.Label(self.root,text='13. \n Plot DX vs. DY',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.plot_DXDY_note.grid(row=6,column=31,sticky='ne')
+        #self.plot_dx_dy(self)
+
+        self.plot_DXDY_filter_button=Button(self.root,image=self.icon_filter,command=self.get_DXDY,bg=self.root_bg,fg=self.root_fg)
+        self.plot_DXDY_filter_button.grid(row=7,column=31,sticky='se')
+        self.plot_DXDY_filter_note=tk.Label(self.root,text='14. \n Filter DX,DY',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.plot_DXDY_filter_note.grid(row=8,column=31,sticky='ne')
+
+    def get_DXDY(self):
+        self.DX_MAX=int(self.DX_MAX_VAR.get())
+        self.DX_MIN=int(self.DX_MIN_VAR.get())
+        self.DY_MAX=int(self.DY_MAX_VAR.get())
+        self.DY_MIN=int(self.DY_MIN_VAR.get())
+        print(self.DX_MIN,self.DX_MAX,self.DY_MIN,self.DY_MAX)
+        self.MOSAIC.filter_dxdy(self.DX_MIN,self.DX_MAX,self.DY_MIN,self.DY_MAX)
+        self.load_df()
+        self.update_counts('na')
     def breakup_df(self):
         self.MOSAIC.breakup_df()
         self.path_JPEGImages=self.MOSAIC.path_JPEGImages
