@@ -240,7 +240,7 @@ class MOSAIC:
         
     def plot_dx_dy(self):
         self.plotting_dx_dy=True
-        self.fig_k=plt.figure(figsize=(self.FIGSIZE_W,self.FIGSIZE_H),num='BBOX SCATTER PLOT of SIZES.  "Double Click" to inspect.  Press "q" to quit.    Press "m" for MOSAIC.')
+        self.fig_k=plt.figure(figsize=(self.FIGSIZE_W,self.FIGSIZE_H),num='BBOX SCATTER PLOT of SIZES DX vs. DY.  "Double Click" to inspect.  Press "q" to quit.    Press "m" for MOSAIC.')
         self.fig_k.set_size_inches((self.FIGSIZE_INCH_W, self.FIGSIZE_INCH_W))
         self.cidj = self.fig_k.canvas.mpl_connect('button_press_event', self.onclick_show_dxdy)
         self.cidkj = self.fig_k.canvas.mpl_connect('key_press_event', self.on_key_show_dxdy)
@@ -249,12 +249,11 @@ class MOSAIC:
 
         plt.rcParams['axes.facecolor'] = 'gray'
         plt.grid(c='white')
-        xaxis_labels='XMAX- XMIN\n\n'
-        
+        xaxis_labels='DX (XMAX- XMIN)\nPress "d" to delete annotation for this object.\n'    
         for label_j,int_i in self.label_dic.items():
-            xaxis_labels+='"{}" == "{}"\n'.format(int_i,label_j)
+            xaxis_labels+='Press "{}" to change label to "{}"\n'.format(int_i,label_j)  
         plt.xlabel(xaxis_labels)
-        plt.ylabel('YMAX-YMIN')
+        plt.ylabel('DY (YMAX-YMIN)')
         plt.scatter(self.df.DX,self.df.DY,c=self.df['label_i_int'],cmap='Spectral',s=5)
         self.gca=plt.gca()
         self.gca.set_aspect('equal','datalim')
