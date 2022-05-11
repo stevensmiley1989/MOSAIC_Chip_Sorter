@@ -236,6 +236,7 @@ class MOSAIC:
                 i+=1
         self.df['label_i_int']=self.df['label_i'].copy()
         self.df['label_i_int']=[self.label_dic[w] for w in self.df['label_i']]
+        self.rev_label_dic={v:k for k,v in self.label_dic.items()}
         
     def plot_dx_dy(self):
         self.plotting_dx_dy=True
