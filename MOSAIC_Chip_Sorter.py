@@ -262,6 +262,7 @@ class MOSAIC:
         plt.show()
     def filter_dxdy(self,DX_MIN,DX_MAX,DY_MIN,DY_MAX):
         self.df=self.df[(self.df['DX']>=DX_MIN) & (self.df['DX']<=DX_MAX) & (self.df['DY']>=self.DY_MIN) & (self.df['DY']<=DY_MAX)].reset_index().drop('index',axis=1)
+        self.df.to_pickle(self.df_filename)
 
 
 
