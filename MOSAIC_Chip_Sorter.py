@@ -30,6 +30,7 @@ User can quickly find mislabeled objects and alter them on the fly.
         'Step 12.  Open Originals with LabelIMG;
         'Step 13.  Plot DX vs DY;
         'Step 14.  Filter by DX & DY;
+        'Step 15.  Make Chips;              
 MOSAIC_Chip_Sorter is a graphical image annotation tool.
 
 It is written in Python and uses Tkinter for its graphical interface.
@@ -125,7 +126,7 @@ Image.MAX_IMAGE_PIXELS = None #edit sjs 5/28/2022
 from PIL import ImageDraw
 from PIL import ImageFont
 import tkinter as tk
-from tkinter import ttk
+from tkinter import Toplevel, ttk
 from tkinter import filedialog as fd
 from tkinter.messagebox import showinfo
 from tkinter.tix import Balloon
@@ -157,6 +158,19 @@ ROOT_H=int(root_tk.winfo_screenheight()*0.95)
 ROOT_W=int(root_tk.winfo_screenwidth()*0.95)
 print('ROOT_H',ROOT_H)
 print('ROOT_W',ROOT_W)
+class popupWindow(object):
+    def __init__(self,master):
+        top=self.top=tk.Toplevel(master)
+        self.l=tk.Label(top,text="Enter new label for item")
+        self.l.pack()
+        self.e=tk.Entry(top)
+        self.e.pack()
+        self.b=Button(top,text='Ok',command=self.cleanup)
+        self.b.pack()
+    def cleanup(self):
+        self.value=self.e.get()
+        self.top.destroy()
+
 class MOSAIC:
     def __init__(self,path_JPEGImages,path_Annotations,df_filename=None):
         self.DEFAULT_ENCODING = DEFAULT_SETTINGS.DEFAULT_ENCODING #'utf-8'
@@ -288,6 +302,47 @@ class MOSAIC:
                 ymax=self.df_to_fix_i['ymax'].iloc[row]
                 label_i=self.df_to_fix_i['label_i'].iloc[row]
                 self.draw_objects(ImageDraw.Draw(image),xmin,xmax,ymin,ymax,label_i,path_fix_jpeg,image)
+    def pad(self,str_i,min_len=8):
+        while len(str_i)<min_len:
+            str_i='0'+str_i
+        return str_i
+    def chips(self):
+        self.unique_labels={w:i for i,w in enumerate(self.df['label_i'].unique())}
+        self.basePath_chips=os.path.join(self.basePath,'chips')
+        if os.path.exists(self.basePath_chips):
+            os.system('rm -rf {}'.format(self.basePath_chips))
+        os.makedirs(self.basePath_chips)
+        for label_i in tqdm(self.unique_labels):
+            self.df_chips=self.df[self.df['label_i']==label_i].reset_index().drop('index',axis=1).copy()
+            self.path_chips_label_i=os.path.join(self.basePath_chips,label_i)
+            if os.path.exists(self.path_chips_label_i):
+                pass
+            else:
+                os.makedirs(self.path_chips_label_i)
+            for anno,jpg in tqdm(zip(self.df_chips.path_anno_i,self.df_chips.path_jpeg_i)):
+                anno_i=anno.split('/')[-1]
+                jpg_i=jpg.split('/')[-1]
+                path_chip_anno=os.path.join(self.path_Annotations,anno_i)
+                path_chip_jpeg=os.path.join(self.path_JPEGImages,jpg_i)
+                self.df_chips_i=self.df_chips[self.df_chips['path_anno_i']==anno].reset_index().drop('index',axis=1)
+                for j,row in enumerate(range(len(self.df_chips_i))):
+                    image=cv2.imread(path_chip_jpeg)
+                    xmin=self.df_chips_i['xmin'].iloc[row]
+                    xmax=self.df_chips_i['xmax'].iloc[row]
+                    ymin=self.df_chips_i['ymin'].iloc[row]
+                    ymax=self.df_chips_i['ymax'].iloc[row]
+                    label_i=self.df_chips_i['label_i'].iloc[row]
+                    chipA=image[ymin:ymax,xmin:xmax]
+                    chip_name_i=label_i+"_"+jpg_i.split('.')[0]+'_chip{}of{}_'.format(self.pad(str(j)),self.pad(str(len(self.df_chips_i))))+'_ymin{}'.format(ymin)+'_ymax{}'.format(ymax)+'_xmin{}'.format(xmin)+'_xmax{}.jpg'.format(xmax)
+                    chip_name_i=os.path.join(self.path_chips_label_i,chip_name_i)
+                    cv2.imwrite(chip_name_i,chipA)
+    def popup(self):
+        root_tk.title('')
+        self.w=popupWindow(root_tk)
+        root_tk.wait_window(self.w.top)
+        print(self.w.value)
+        root_tk.title("MOSAIC Chip Sorter")
+        return self.w.value
 
     def draw_objects(self,draw, xmin,xmax,ymin,ymax,label_i,path_fix_jpeg,image):
         """Draws the bounding box and label for each object."""
@@ -764,7 +819,8 @@ class MOSAIC:
                         (xmax, ymax)],
                     outline=self.COLOR, width=3)
             font = ImageFont.load_default()
-            text_labels='Press "d" to delete annotation for this object.\n\n'
+            text_labels='Press "c" to create new name for object list below.\n\n'
+            text_labels+='Press "d" to delete annotation for this object.\n\n'
             for label_j,int_i in self.label_dic.items():
                 text_labels+='Press "{}" to change label to "{}"\n'.format(int_i,label_j)
             draw.text((0, 0),
@@ -829,7 +885,8 @@ class MOSAIC:
                         (xmax, ymax)],
                     outline=self.COLOR, width=3)
             font = ImageFont.load_default()
-            text_labels='Press "d" to delete annotation for this object.\n\n'
+            text_labels='Press "c" to create new name for object list below.\n\n'
+            text_labels+='Press "d" to delete annotation for this object.\n\n'
             for label_j,int_i in self.label_dic.items():
                 text_labels+='Press "{}" to change label to "{}"\n'.format(int_i,label_j)
             draw.text((0, 0),
@@ -952,6 +1009,12 @@ class MOSAIC:
                     pass 
             except:
                 print('This ship has sailed, item not found.')
+        if event.key=='c':
+            self.popup()
+            new_item_int=len(self.label_dic.keys())
+            self.label_dic[self.w.value]=new_item_int
+            self.rev_label_dic={v:k for k,v in self.label_dic.items()}
+            self.draw_umap()
         for label_j,int_i in self.label_dic.items(): 
             print('label_j',label_j,'int_i',int_i)
             if event.key==str(int_i):
@@ -1049,6 +1112,14 @@ class MOSAIC:
             self.k=0
             self.run_selection=self.look_at_selection()
             #self.inspect_mosaic=False
+        if event.key=='c':
+            self.popup()
+            new_item_int=len(self.label_dic.keys())
+            print('MAX value is: ',max(self.label_dic.values()))
+            self.label_dic[self.w.value]=new_item_int
+            self.rev_label_dic={v:k for k,v in self.label_dic.items()}
+            self.draw_umap()
+
         if event.key=='d':
             try:
                 print('deleting bounding box')
@@ -1380,11 +1451,10 @@ class MOSAIC:
         if _platform!='darwin':
             plt.clf() #edit sjs 5/28/2022
         i=0
-        self.label_dic={}
         for label in self.df['label_i'].unique():
             if label not in self.label_dic.keys():
                 self.label_dic[label]=i
-                i+=1
+                i+=1       
         self.rev_label_dic={v:k for k,v in self.label_dic.items()}
         self.df.to_pickle(self.df_filename)
         self.fig_j=plt.figure(figsize=(self.FIGSIZE_W,self.FIGSIZE_H),num='UMAP.  "Double Click" to inspect.  Press "q" to quit.    Press "m" for MOSAIC.')
@@ -1396,8 +1466,10 @@ class MOSAIC:
 
         plt.rcParams['axes.facecolor'] = 'gray'
         plt.grid(c='white')
-        text_labels='Press "d" to delete annotation for this object.\n\n'
-        
+        text_labels='Press "c" to create new name for object list below.\n\n'
+
+        text_labels+='Press "d" to delete annotation for this object.\n\n'
+
         for label_j,int_i in self.label_dic.items():
             text_labels+='Press "{}" to change label to "{}"\n'.format(int_i,label_j)
         plt.xlabel(text_labels)
@@ -1434,7 +1506,6 @@ class MOSAIC:
             self.df['emb_Y']=[w for w in self.embedding[:,1]]
             self.df['emb_X']=self.df['emb_X'].astype(np.float16)
             self.df['emb_Y']=self.df['emb_Y'].astype(np.float16)
-            self.label_dic={}
             i=0
             for label in self.df['label_i'].unique():
                 if label not in self.label_dic.keys():
@@ -1904,6 +1975,11 @@ class App:
         self.plot_DXDY_filter_note=tk.Label(self.root,text='14. \n Filter DX,DY',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.plot_DXDY_filter_note.grid(row=8,column=31,sticky='ne')
 
+        self.make_chips_button=Button(self.root,image=self.icon_create,command=self.make_chips,bg=self.root_bg,fg=self.root_fg)
+        self.make_chips_button.grid(row=9,column=31,sticky='se')
+        self.make_chips_note=tk.Label(self.root,text='15. \n Make Chips',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.make_chips_note.grid(row=10,column=31,sticky='ne')
+
     def get_DXDY(self):
         self.DX_MAX=int(self.DX_MAX_VAR.get())
         self.DX_MIN=int(self.DX_MIN_VAR.get())
@@ -1948,6 +2024,9 @@ class App:
         self.DY=self.MOSAIC.DY
         self.MOSAIC.load()
         self.MOSAIC.look_at_target(self.target_i.get())
+        self.update_counts('na')
+    def make_chips(self):
+        self.MOSAIC.chips()
         self.update_counts('na')
     def get_update_background_img(self):
         self.image=Image.open(self.root_background_img)
