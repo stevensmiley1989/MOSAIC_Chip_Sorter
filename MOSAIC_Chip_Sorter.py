@@ -464,7 +464,7 @@ class MOSAIC:
             try:
                 xmltree = ElementTree.parse(path_anno_i, parser=parser).getroot()
             except:
-                print(path_anno_i)
+                print(path_anno_i) #edit sjs 5/27/2022 in case bad annotation will want to know the one causing the issue
                 xmltree = ElementTree.parse(path_anno_i, parser=parser).getroot()
             filename = xmltree.find('filename').text
             width_i=xmltree.find('size').find('width').text
