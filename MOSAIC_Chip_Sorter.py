@@ -461,7 +461,11 @@ class MOSAIC:
         i=0
         for path_anno_i,path_jpeg_i in tqdm(zip(self.Annotations,self.JPEGs)):
             parser = etree.XMLParser(encoding=self.ENCODE_METHOD)
-            xmltree = ElementTree.parse(path_anno_i, parser=parser).getroot()
+            try:
+                xmltree = ElementTree.parse(path_anno_i, parser=parser).getroot()
+            except:
+                print(path_anno_i)
+                xmltree = ElementTree.parse(path_anno_i, parser=parser).getroot()
             filename = xmltree.find('filename').text
             width_i=xmltree.find('size').find('width').text
             height_i=xmltree.find('size').find('height').text
