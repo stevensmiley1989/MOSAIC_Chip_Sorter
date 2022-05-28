@@ -104,7 +104,9 @@ import pandas as pd
 from tqdm import tqdm
 import os
 import matplotlib
+
 matplotlib.rcParams['interactive'] == True
+
 import matplotlib.pyplot as plt
 
 from functools import partial
@@ -119,6 +121,7 @@ import functools
 import time
 import PIL
 from PIL import Image, ImageTk
+Image.MAX_IMAGE_PIXELS = None #edit sjs 5/28/2022
 from PIL import ImageDraw
 from PIL import ImageFont
 import tkinter as tk
@@ -239,6 +242,8 @@ class MOSAIC:
         self.rev_label_dic={v:k for k,v in self.label_dic.items()}
         
     def plot_dx_dy(self):
+        if _platform!='darwin':
+            plt.clf() #edit sjs 5/28/2022
         self.plotting_dx_dy=True
         self.fig_k=plt.figure(figsize=(self.FIGSIZE_W,self.FIGSIZE_H),num='BBOX SCATTER PLOT of SIZES DX vs. DY.  "Double Click" to inspect.  Press "q" to quit.    Press "m" for MOSAIC.')
         self.fig_k.set_size_inches((self.FIGSIZE_INCH_W, self.FIGSIZE_INCH_W))
@@ -455,7 +460,7 @@ class MOSAIC:
             plt.close('all')
             self.go_to_next=True
         if event.key=='q' or event.key=='escape':
-            plt.close('all')
+            plt.close('all') 
             self.close_window=True
         self.df.to_pickle(self.df_filename)
     def onclick(self,event):
@@ -537,11 +542,13 @@ class MOSAIC:
     def on_key_mosaic(self,event):
         print('you pressed', event.key, event.xdata, event.ydata)
         if event.key=='q':
-            plt.close('all')
+            if _platform=='darwin':
+                plt.close('all') #edit sjs 5/28
             self.inspect_mosaic=False
             self.run_selection=None
             self.close_window_mosaic=True
-            cv2.destroyAllWindows()
+            if _platform=='darwin':
+                cv2.destroyAllWindows()
             if self.plotting_dx_dy==False:
                 self.draw_umap()
             else:
@@ -846,13 +853,16 @@ class MOSAIC:
     def on_key_show_dxdy(self,event):
         print('you pressed', event.key, event.xdata, event.ydata)
         if event.key=='h':
-            plt.close('all')
+            if _platform!='darwin':
+                plt.close() #edit sjs 5/28/2022
+            else:
+                plt.close('all')
             self.inspect_mosaic=False
             self.run_selection=None
             self.close_window_mosaic=True
             cv2.destroyAllWindows()
             del self.a_xmin,self.a_xmax,self.a_ymin,self.a_ymax
-            self.plot_dx_dy()       
+            self.plot_dx_dy()   
         if event.key=='n' and self.inspect_mosaic==False:
             try:
                 cv2.destroyAllWindows()
@@ -989,11 +999,14 @@ class MOSAIC:
     def on_key_show(self,event):
         print('you pressed', event.key, event.xdata, event.ydata)
         if event.key=='h':
-            plt.close('all')
+            if _platform!='darwin':
+                plt.close() #edit sjs 5/28/2022
+            else:
+                plt.close('all')
+            cv2.destroyAllWindows() #edit sjs 5/28/2022
             self.inspect_mosaic=False
             self.run_selection=None
             self.close_window_mosaic=True
-            cv2.destroyAllWindows()
             del self.a_xmin,self.a_xmax,self.a_ymin,self.a_ymax
             self.draw_umap()        
         if event.key=='n' and self.inspect_mosaic==False:
@@ -1003,13 +1016,16 @@ class MOSAIC:
                 pass
         if event.key=='q' or event.key=='escape':
             self.close_window_mosaic=False
-            plt.close('all')
-            try:
-                cv2.destroyAllWindows()
-            except:
-                pass
+            if _platform=='darwin':
+                plt.close('all') #edit sjs 5/28/2022
+                try:
+                    cv2.destroyAllWindows() #edit sjs 5/28/2022
+                except:
+                    pass
             self.inspect_mosaic=False
             self.run_selection=None
+            if _platform!='darwin': #edit sjs 5/28/2022
+                plt.close('all')
         if event.key=='f':
             print('fixing it')
             self.df.at[self.index_bad,'checked']="bad"
@@ -1361,6 +1377,8 @@ class MOSAIC:
                 df_i.to_pickle(df_i_filename)
             count+=1
     def draw_umap(self):
+        if _platform!='darwin':
+            plt.clf() #edit sjs 5/28/2022
         i=0
         self.label_dic={}
         for label in self.df['label_i'].unique():
