@@ -163,14 +163,71 @@ ROOT_H=int(root_tk.winfo_screenheight()*0.95)
 ROOT_W=int(root_tk.winfo_screenwidth()*0.95)
 print('ROOT_H',ROOT_H)
 print('ROOT_W',ROOT_W)
+def remove_directory(dir):
+    #dir = 'path/to/dir'
+    for files in os.listdir(dir):
+        path = os.path.join(dir, files)
+        try:
+            shutil.rmtree(path)
+        except OSError:
+            os.remove(path)
+    os.rmdir(dir)
+def FIND_REPLACE_TARGETS(targets_dic,path_annotations):
+	targets_keep=targets_dic.values()
+	#targets_keep=['transporter9']
+	#path_annotations="/media/steven/Elements/Drone_Videos/Combined_Transporter9_withVisDrone_noanno/Annotations"
+	path_annotations_new=path_annotations
+
+	annotation_files=os.listdir(path_annotations)
+	annotation_files=[w for w in annotation_files if w.find('.xml')!=-1]
+	start=False
+	keep=True
+	for file in tqdm(annotation_files):
+		file_og=os.path.join(path_annotations,file)
+		file_new=os.path.join(path_annotations_new,file)
+		f=open(file_og,'r')
+		f_read=f.readlines()
+		f.close()
+		f_new=[]
+		for i,line in enumerate(f_read):
+			if line.find('<object>')!=-1:
+				start=True
+				name=f_read[i+1].split('<name>')[1].split('</name>')[0].replace('\n','').strip()
+				name_og=name.strip()
+				if name in list(targets_dic.keys()):
+					name=targets_dic[name]
+				if name in list(targets_keep):
+					#print('BEFORE: \t',f_read[i+1])
+					keep=True
+					f_read[i+1]=f_read[i+1].replace(name_og.strip(),name.strip()) #find/replace label
+					#print('AFTER: \t',f_read[i+1])
+				else:
+					keep=False
+			if line.find('</object>')!=-1:
+				start=False
+				if keep:
+					f_new.append(line)
+				else:
+					pass
+			elif start and keep:
+				f_new.append(line)
+			elif start and keep==False:
+				pass
+			else:
+				f_new.append(line)
+		f=open(file_new,'w')
+		tmp=[f.writelines(w) for w in f_new]
+		f.close()
 class popupWindow(object):
     def __init__(self,master):
         self.top=tk.Toplevel(master)
-        self.l=tk.Label(self.top,text="Enter new label for item")
+        self.top.geometry( "{}x{}".format(ROOT_W//2,ROOT_H//2) )
+        self.top.configure(background = 'black')
+        self.l=tk.Label(self.top,text="Enter new label for item",bg=DEFAULT_SETTINGS.root_fg, fg=DEFAULT_SETTINGS.root_bg)
         self.l.pack()
         self.e=tk.Entry(self.top)
         self.e.pack()
-        self.b=Button(self.top,text='Ok',command=self.cleanup)
+        self.b=Button(self.top,text='Ok',command=self.cleanup,bg=DEFAULT_SETTINGS.root_fg, fg=DEFAULT_SETTINGS.root_bg)
         self.b.pack()
     def cleanup(self):
         self.value=self.e.get()
@@ -181,21 +238,19 @@ class popupWindowDropDown(object):
         for k,v in dic_i.items():
             row_i="{}: {}".format(v,k)
             options.append(row_i)
-        master
         self.top=tk.Toplevel(master)
-        self.top.geometry( "800x200" )
+        self.top.geometry( "{}x{}".format(ROOT_W//2,ROOT_H//2) )
+        self.top.configure(background = 'black')
         if _platform=='darwin':
             self.top.lift()
         self.clicked=tk.StringVar()
         self.clicked.set(options[0])
         self.l=tk.OptionMenu(self.top,self.clicked,*options)
         self.l.pack()
-        self.b=Button(self.top,text='Submit',command=self.cleanup)
+        self.b=Button(self.top,text='Submit',command=self.cleanup,bg=DEFAULT_SETTINGS.root_fg, fg=DEFAULT_SETTINGS.root_bg)
         self.b.pack()
-        self.e=Button(self.top,text='cancel',command=self.cancel)
+        self.e=Button(self.top,text='cancel',command=self.cancel,bg=DEFAULT_SETTINGS.root_fg, fg=DEFAULT_SETTINGS.root_bg)
         self.e.pack()
-        self.label=tk.Label(self.top,text=" ")
-        self.label.pack()
     def cleanup(self):
         self.value=str(self.clicked.get().split(':')[0])
         self.top.destroy()
@@ -204,6 +259,68 @@ class popupWindowDropDown(object):
         #self.value=str(self.clicked.get().split(':')[0])
         self.value='None Selected'
         self.top.destroy()
+
+class popupWindowChangeLabels(object):
+    def __init__(self,master,dic_i,path_annotations,df):
+        self.path_annotations=path_annotations
+        self.df=df
+        options=[]
+        for k,v in dic_i.items():
+            row_i="{}: {}".format(v,k)
+            #print(row_i)
+            options.append(row_i)
+        self.top=tk.Toplevel(master)
+        self.top.geometry( "{}x{}".format(ROOT_W,ROOT_H) )
+        self.top.configure(background = 'black')
+        self.get_update_background_img()
+        #if _platform=='darwin':
+        self.top.lift()
+        self.new_dic={}
+        self.new_labels={}
+        self.new_Entries={}
+        self.new_labels_og=tk.Label(self.top,text="ORIGINAL VALUE",bg=DEFAULT_SETTINGS.root_fg, fg=DEFAULT_SETTINGS.root_bg,font=("Arial", 8))
+        self.new_labels_og.grid(row=0,column=1,sticky='se')
+        self.new_labels_new=tk.Label(self.top,text="NEW VALUE",bg=DEFAULT_SETTINGS.root_fg, fg=DEFAULT_SETTINGS.root_bg,font=("Arial", 8))
+        self.new_labels_new.grid(row=0,column=2,sticky='s')
+        for i,(k,v) in enumerate(dic_i.items()):
+            i+=1
+            self.new_dic[k]=tk.StringVar()
+            self.new_dic[k].set(k)
+            self.new_labels[k]=tk.Label(self.top,text=k+":",bg=DEFAULT_SETTINGS.root_bg, fg=DEFAULT_SETTINGS.root_fg)
+            self.new_labels[k].grid(row=i+1,column=1,sticky='ne')
+            self.new_Entries[k]=tk.Entry(self.top,textvariable=self.new_dic[k])
+            self.new_Entries[k].grid(row=i+1,column=2,sticky='nw')
+        self.b=Button(self.top,text='Submit',command=self.cleanup,bg=DEFAULT_SETTINGS.root_fg,fg=DEFAULT_SETTINGS.root_bg)
+        self.b.grid(row=i+2,column=3,sticky='s')
+        self.e=Button(self.top,text='cancel',command=self.cancel,bg=DEFAULT_SETTINGS.root_fg,fg=DEFAULT_SETTINGS.root_bg)
+        self.e.grid(row=i+3,column=3,sticky='s')
+    def cleanup(self):
+        targets_dic={}
+        for i,(k,v) in enumerate(self.new_dic.items()):
+            print(k,':',v.get())
+            if v.get().strip()!='':
+                targets_dic[k]=v.get().strip()
+                self.df['label_i'].replace(k,v.get().strip(),inplace=True)
+                self.df['label_i']=self.df['label_i'].astype(str)
+            else:
+                self.df=self.df[self.df['label_i']!=k].reset_index().drop('index',axis=1)
+                self.df['label_i']=self.df['label_i'].astype(str)
+        FIND_REPLACE_TARGETS(targets_dic,self.path_annotations)
+        self.value='cleanedup'
+        
+        self.top.destroy()
+
+    def cancel(self):
+        #self.value=str(self.clicked.get().split(':')[0])
+        self.value='None Selected'
+        self.top.destroy()
+    def get_update_background_img(self):
+        self.image=Image.open(DEFAULT_SETTINGS.root_background_img)
+        self.image=self.image.resize((ROOT_W,ROOT_H),Image.ANTIALIAS)
+        self.bg=ImageTk.PhotoImage(self.image)
+        self.canvas=tk.Canvas(self.top,width=ROOT_W,height=ROOT_H)
+        self.canvas.grid(row=0,column=0,columnspan=DEFAULT_SETTINGS.canvas_columnspan,rowspan=DEFAULT_SETTINGS.canvas_rowspan,sticky='nw')
+        self.canvas.create_image(0,0,image=self.bg,anchor='nw')
 class MOSAIC:
     def __init__(self,path_JPEGImages,path_Annotations,df_filename=None):
         self.DEFAULT_ENCODING = DEFAULT_SETTINGS.DEFAULT_ENCODING #'utf-8'
@@ -339,11 +456,13 @@ class MOSAIC:
         while len(str_i)<min_len:
             str_i='0'+str_i
         return str_i
+    
     def chips(self):
         self.unique_labels={w:i for i,w in enumerate(self.df['label_i'].unique())}
         self.basePath_chips=os.path.join(self.basePath,'chips')
         if os.path.exists(self.basePath_chips):
-            os.system('rm -rf {}'.format(self.basePath_chips))
+            remove_directory(self.basePath_chips)
+            #os.system('rm -rf {}'.format(self.basePath_chips))
         os.makedirs(self.basePath_chips)
         for label_i in tqdm(self.unique_labels):
             self.df_chips=self.df[self.df['label_i']==label_i].reset_index().drop('index',axis=1).copy()
@@ -390,7 +509,22 @@ class MOSAIC:
             original_root_tk.update()
             original_root_tk.deiconify()
         return self.w.value
-
+    def popup_changelabels(self):
+        #if _platform=='darwin':
+        root_tk.withdraw()
+        root_tk.title('Change Labels')
+        original_root_tk=root_tk
+        print(self.label_dic)
+        self.w=popupWindowChangeLabels(root_tk,self.label_dic,self.path_Annotations,self.df)
+        original_root_tk.wait_window(self.w.top)
+        print(self.w.value)
+        root_tk.title("MOSAIC Chip Sorter")
+        #if _platform=='darwin':
+        original_root_tk.update()
+        original_root_tk.deiconify()
+        self.df=self.w.df
+        self.df.to_pickle(self.df_filename)
+        return self.w.value
     def draw_objects(self,draw, xmin,xmax,ymin,ymax,label_i,path_fix_jpeg,image):
         """Draws the bounding box and label for each object."""
         
@@ -2121,6 +2255,11 @@ class App:
         self.make_chips_note=tk.Label(self.root,text='15. \n Make Chips',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.make_chips_note.grid(row=10,column=31,sticky='ne')
 
+        self.change_labels_button=Button(self.root,image=self.icon_create,command=self.change_labels,bg=self.root_bg,fg=self.root_fg)
+        self.change_labels_button.grid(row=11,column=31,sticky='se')
+        self.change_labels_note=tk.Label(self.root,text='16. \n Change Labels',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.change_labels_note.grid(row=12,column=31,sticky='ne')        
+
     def get_DXDY(self):
         self.DX_MAX=int(self.DX_MAX_VAR.get())
         self.DX_MIN=int(self.DX_MIN_VAR.get())
@@ -2168,6 +2307,10 @@ class App:
         self.update_counts('na')
     def make_chips(self):
         self.MOSAIC.chips()
+        self.update_counts('na')
+    def change_labels(self):
+        self.MOSAIC.popup_changelabels()
+        self.load_df()
         self.update_counts('na')
     def get_update_background_img(self):
         self.image=Image.open(self.root_background_img)
