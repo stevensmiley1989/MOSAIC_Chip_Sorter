@@ -75,7 +75,12 @@ MOSAIC Hotkeys
 +--------------------+--------------------------------------------+
 | q                  | Close the Mosaic Images                    |
 +--------------------+--------------------------------------------+
-
+| y                  | Select all objects in Mosaic               |
++--------------------+--------------------------------------------+
+| u                  | Unselect all objects in Mosaic             |
++--------------------+--------------------------------------------+
+| t                  | Drop Down Menu for changing name of object |
++--------------------+--------------------------------------------+
 ~~~~~~~
 
 
@@ -160,17 +165,44 @@ print('ROOT_H',ROOT_H)
 print('ROOT_W',ROOT_W)
 class popupWindow(object):
     def __init__(self,master):
-        top=self.top=tk.Toplevel(master)
-        self.l=tk.Label(top,text="Enter new label for item")
+        self.top=tk.Toplevel(master)
+        self.l=tk.Label(self.top,text="Enter new label for item")
         self.l.pack()
-        self.e=tk.Entry(top)
+        self.e=tk.Entry(self.top)
         self.e.pack()
-        self.b=Button(top,text='Ok',command=self.cleanup)
+        self.b=Button(self.top,text='Ok',command=self.cleanup)
         self.b.pack()
     def cleanup(self):
         self.value=self.e.get()
         self.top.destroy()
+class popupWindowDropDown(object):
+    def __init__(self,master,dic_i):
+        options=[]
+        for k,v in dic_i.items():
+            row_i="{}: {}".format(v,k)
+            options.append(row_i)
+        master
+        self.top=tk.Toplevel(master)
+        self.top.geometry( "800x200" )
+        if _platform=='darwin':
+            self.top.lift()
+        self.clicked=tk.StringVar()
+        self.clicked.set(options[0])
+        self.l=tk.OptionMenu(self.top,self.clicked,*options)
+        self.l.pack()
+        self.b=Button(self.top,text='Submit',command=self.cleanup)
+        self.b.pack()
+        self.e=Button(self.top,text='cancel',command=self.cancel)
+        self.e.pack()
+        self.label=tk.Label(self.top,text=" ")
+        self.label.pack()
+    def cleanup(self):
+        self.value=str(self.clicked.get().split(':')[0])
+        self.top.destroy()
 
+    def cancel(self):
+        self.value=str(self.clicked.get().split(':')[0])
+        self.top.destroy()
 class MOSAIC:
     def __init__(self,path_JPEGImages,path_Annotations,df_filename=None):
         self.DEFAULT_ENCODING = DEFAULT_SETTINGS.DEFAULT_ENCODING #'utf-8'
@@ -344,6 +376,20 @@ class MOSAIC:
         root_tk.title("MOSAIC Chip Sorter")
         return self.w.value
 
+    def popup_multint(self,options):
+        if _platform=='darwin':
+            root_tk.withdraw()
+        root_tk.title('Select the new object name from the dropdown')
+        original_root_tk=root_tk
+        self.w=popupWindowDropDown(root_tk,options)
+        original_root_tk.wait_window(self.w.top)
+        print(self.w.value)
+        root_tk.title("MOSAIC Chip Sorter")
+        if _platform=='darwin':
+            original_root_tk.update()
+            original_root_tk.deiconify()
+        return self.w.value
+
     def draw_objects(self,draw, xmin,xmax,ymin,ymax,label_i,path_fix_jpeg,image):
         """Draws the bounding box and label for each object."""
         
@@ -464,7 +510,7 @@ class MOSAIC:
             try:
                 xmltree = ElementTree.parse(path_anno_i, parser=parser).getroot()
             except:
-                print(path_anno_i) #edit sjs 5/28/2022 in case bad annotation will want to know the one causing the issue
+                print(path_anno_i)
                 xmltree = ElementTree.parse(path_anno_i, parser=parser).getroot()
             filename = xmltree.find('filename').text
             width_i=xmltree.find('size').find('width').text
@@ -517,9 +563,11 @@ class MOSAIC:
         print('you pressed', event.key, event.xdata, event.ydata)
         if event.key=='n':
             plt.close('all')
+            cv2.destroyAllWindows() #edit sjs 6/3/2022
             self.go_to_next=True
         if event.key=='q' or event.key=='escape':
             plt.close('all') 
+            cv2.destroyAllWindows() #edit sjs 6/3/2022
             self.close_window=True
         self.df.to_pickle(self.df_filename)
     def onclick(self,event):
@@ -535,6 +583,34 @@ class MOSAIC:
                 if event.dblclick:
                     self.df.at[index_bad,'checked']="good" #resets
                     self.title_list[j].set_text(str(self.dic[j]))
+                elif event.button==2:
+                    cv2.destroyAllWindows()
+                    self.image=Image.open(self.df['path_jpeg_i'].loc[index_bad])
+                    xmin=self.df['xmin'].loc[index_bad]
+                    xmax=self.df['xmax'].loc[index_bad]
+                    ymin=self.df['ymin'].loc[index_bad]
+                    ymax=self.df['ymax'].loc[index_bad]
+                    label_i=self.df['label_i'].loc[index_bad]
+                    draw=ImageDraw.Draw(self.image)
+                    draw.rectangle([(xmin, ymin),
+                                (xmax, ymax)],
+                            outline=self.COLOR, width=3)
+                    font = ImageFont.load_default()
+                    draw.text((xmin + 4, ymin + 4),
+                        '%s\n' % (label_i),
+                        fill=self.COLOR, font=font)
+                    self.img_i=cv2.cvtColor(np.array(self.image),cv2.COLOR_BGR2RGB)
+                    self.img_i_H=self.img_i.shape[1]
+                    self.img_i_W=self.img_i.shape[0]
+                    self.img_i_W_ratio=self.ROOT_W/self.img_i_W
+                    self.img_i_H_ratio=self.ROOT_H/self.img_i_H
+                    self.img_i_new_W=int(0.85*self.img_i_W_ratio*self.img_i_W)
+                    self.img_i_new_H=int(0.85*self.img_i_H_ratio*self.img_i_H)
+                    self.img_i=cv2.resize(self.img_i,(self.img_i_new_W,self.img_i_new_H))
+                    cv2.imshow('Selected Image.  Press "q" to close window',self.img_i)
+                    #cv2.waitKey(0)
+                    #cv2.destroyAllWindows()
+                    plt.show() 
                 else:
                     self.df.at[index_bad,'checked']="bad" #resets
                     self.title_list[j].set_text('{} = BAD'.format(self.dic[j]))
@@ -616,12 +692,36 @@ class MOSAIC:
 
 
             #self.close_window_mosaic=True
+        elif event.key=='y':
+            print('SELECTING ALL')
+            self.selection_list={}
+            for j,ax_j in enumerate(self.axes_list):
+                index_bad=self.df_i.iloc[self.dic[j]].name
+                self.df_sample.at[index_bad,'selected']=False #selected is false
+                self.title_list[j].set_text('{} = SELECTED'.format(self.dic[j]))
+                self.title_list[j].set_color('red')
+                self.selection_list[j]=index_bad
+            plt.show()
+        elif event.key=='u':
+            print('DESELECTING ALL')
+            self.selection_list={}
+            for j,ax_j in enumerate(self.axes_list):
+                index_bad=self.df_i.iloc[self.dic[j]].name
+                self.df_sample.at[index_bad,'selected']=True #selected is true
+                self.title_list[j].set_text('{}'.format(self.df['label_i'][index_bad]))
+                self.title_list[j].set_color('purple')
+                if index_bad in self.selection_list.values():
+                    self.selection_list.pop(j) 
+            plt.show()  
         else:
             #plt.close('all')
             if event.key=='n':
                 plt.close('all')
                 self.go_to_next=True
                 self.selection_list={}
+            if event.key=='t':
+                event.key=self.popup_multint(self.label_dic)
+                print('NEW event.key=={}'.format(event.key))           
             if event.key=='d':
                 if len(self.selection_list)>0:
                     for j,selection_i in self.selection_list.items():
@@ -823,10 +923,17 @@ class MOSAIC:
                         (xmax, ymax)],
                     outline=self.COLOR, width=3)
             font = ImageFont.load_default()
-            text_labels='Press "c" to create new name for object list below.\n\n'
+            text_labels='Press "y" to select all objects in MOSAIC.\n\n'
+            text_labels+='Press "u" to unselect all objects in MOSAIC.\n\n'
+            text_labels+='Press "t" for dropdown to change object name. \n\n'
+            text_labels+='Press "h" to refresh.\n\n'
+            text_labels+='Press "c" to create new name for object list below.\n\n'
             text_labels+='Press "d" to delete annotation for this object.\n\n'
             for label_j,int_i in self.label_dic.items():
-                text_labels+='Press "{}" to change label to "{}"\n'.format(int_i,label_j)
+                if int_i<10:
+                    text_labels+='Press "{}" to change label to "{}"\n'.format(int_i,label_j)
+                else:
+                    text_labels+='Press "t" and select "{}" to change label to "{}"\n'.format(int_i,label_j)
             draw.text((0, 0),
                 text_labels,
                 fill='green', stroke_fill='blue',font=font)
@@ -889,10 +996,18 @@ class MOSAIC:
                         (xmax, ymax)],
                     outline=self.COLOR, width=3)
             font = ImageFont.load_default()
-            text_labels='Press "c" to create new name for object list below.\n\n'
+            text_labels='Press "y" to select all objects in MOSAIC.\n\n'
+            text_labels+='Press "u" to unselect all objects in MOSAIC.\n\n'
+            text_labels+='Press "t" for dropdown to change object name. \n\n'
+            text_labels+='Press "h" to refresh.\n\n'
+            text_labels+='Press "c" to create new name for object list below.\n\n'
             text_labels+='Press "d" to delete annotation for this object.\n\n'
             for label_j,int_i in self.label_dic.items():
-                text_labels+='Press "{}" to change label to "{}"\n'.format(int_i,label_j)
+                if int_i<10:
+                    text_labels+='Press "{}" to change label to "{}"\n'.format(int_i,label_j)
+                else:
+                    text_labels+='Press "t" and select "{}" to change label to "{}"\n'.format(int_i,label_j)
+
             draw.text((0, 0),
                 text_labels,
                 fill='green', stroke_fill='blue',font=font)
@@ -914,16 +1029,19 @@ class MOSAIC:
     def on_key_show_dxdy(self,event):
         print('you pressed', event.key, event.xdata, event.ydata)
         if event.key=='h':
-            if _platform!='darwin':
-                plt.close() #edit sjs 5/28/2022
-            else:
-                plt.close('all')
-            self.inspect_mosaic=False
-            self.run_selection=None
-            self.close_window_mosaic=True
-            cv2.destroyAllWindows()
-            del self.a_xmin,self.a_xmax,self.a_ymin,self.a_ymax
-            self.plot_dx_dy()   
+            try:
+                del self.a_xmin,self.a_xmax,self.a_ymin,self.a_ymax
+                if _platform!='darwin':
+                    plt.close() #edit sjs 5/28/2022
+                else:
+                    plt.close('all')
+                self.inspect_mosaic=False
+                self.run_selection=None
+                self.close_window_mosaic=True
+                cv2.destroyAllWindows()
+                self.plot_dx_dy()   
+            except:
+                pass
         if event.key=='n' and self.inspect_mosaic==False:
             try:
                 cv2.destroyAllWindows()
@@ -1019,6 +1137,7 @@ class MOSAIC:
             self.label_dic[self.w.value]=new_item_int
             self.rev_label_dic={v:k for k,v in self.label_dic.items()}
             self.draw_umap()
+
         for label_j,int_i in self.label_dic.items(): 
             print('label_j',label_j,'int_i',int_i)
             if event.key==str(int_i):
@@ -1066,16 +1185,21 @@ class MOSAIC:
     def on_key_show(self,event):
         print('you pressed', event.key, event.xdata, event.ydata)
         if event.key=='h':
-            if _platform!='darwin':
-                plt.close() #edit sjs 5/28/2022
-            else:
-                plt.close('all')
-            cv2.destroyAllWindows() #edit sjs 5/28/2022
-            self.inspect_mosaic=False
-            self.run_selection=None
-            self.close_window_mosaic=True
-            del self.a_xmin,self.a_xmax,self.a_ymin,self.a_ymax
-            self.draw_umap()        
+            try:
+                del self.a_xmin,self.a_xmax,self.a_ymin,self.a_ymax
+                if _platform!='darwin':
+                    plt.close() #edit sjs 5/28/2022
+                else:
+                    plt.close('all')
+                cv2.destroyAllWindows() #edit sjs 5/28/2022
+                self.inspect_mosaic=False
+                self.run_selection=None
+                self.close_window_mosaic=True
+                self.draw_umap()
+            except:
+                pass
+            
+                  
         if event.key=='n' and self.inspect_mosaic==False:
             try:
                 cv2.destroyAllWindows()
@@ -1123,6 +1247,8 @@ class MOSAIC:
             self.label_dic[self.w.value]=new_item_int
             self.rev_label_dic={v:k for k,v in self.label_dic.items()}
             self.draw_umap()
+
+
 
         if event.key=='d':
             try:
@@ -1406,7 +1532,11 @@ class MOSAIC:
             #         self.chip_i=self.jpg_i[self.ymin_i:self.ymax_i,self.xmin_i:self.xmax_i,:]
             #         self.chip_square_i=Image.fromarray(self.chip_i)    
             self.chip_i=self.jpg_i[self.ymin_i:self.ymax_i,self.xmin_i:self.xmax_i,:]
-            self.chip_square_i=Image.fromarray(self.chip_i)              
+            try:
+                self.chip_square_i=Image.fromarray(self.chip_i) 
+            except:
+                print(self.df['path_jpeg_i'].iloc[i])
+                self.chip_square_i=Image.fromarray(self.chip_i)           
             self.chip_square_i=self.chip_square_i.resize((self.W,self.H),Image.ANTIALIAS)
             self.chip_square_i=np.array(self.chip_square_i)
             self.df.at[i,'umap_input']=self.chip_square_i
@@ -1470,12 +1600,18 @@ class MOSAIC:
 
         plt.rcParams['axes.facecolor'] = 'gray'
         plt.grid(c='white')
-        text_labels='Press "c" to create new name for object list below.\n\n'
-
+        text_labels='Press "y" to select all objects in MOSAIC.\n\n'
+        text_labels+='Press "u" to unselect all objects in MOSAIC.\n\n'
+        text_labels+='Press "t" for dropdown to change object name. \n\n'
+        text_labels+='Press "h" to refresh.\n\n'
+        text_labels+='Press "c" to create new name for object list below.\n\n'
         text_labels+='Press "d" to delete annotation for this object.\n\n'
 
         for label_j,int_i in self.label_dic.items():
-            text_labels+='Press "{}" to change label to "{}"\n'.format(int_i,label_j)
+            if int_i<10:
+                text_labels+='Press "{}" to change label to "{}"\n'.format(int_i,label_j)
+            else:
+                text_labels+='Press "t" and select "{}" to change label to "{}"\n'.format(int_i,label_j)
         plt.xlabel(text_labels)
         plt.scatter(self.df['emb_X'],self.df['emb_Y'],c=self.df['label_i_int'],cmap='Spectral',s=5)
         self.ex=min(self.df['emb_X'])
@@ -1485,9 +1621,9 @@ class MOSAIC:
         self.gca=plt.gca()
         self.gca.set_aspect('equal','datalim')
         try:
+            plt.ylabel('Press "h" to zoom out')
             plt.xlim([self.a_xmin,self.a_xmax])
             plt.ylim([self.a_ymin,self.a_ymax])
-            plt.ylabel('Press "h" to zoom out')
         except:
             pass
         plt.colorbar(boundaries=np.arange(len(self.df['label_i_int'].unique())+1)-0.5).set_ticks(np.arange(len(self.df['label_i_int'].unique())))
@@ -1570,6 +1706,7 @@ class App:
         self.canvas_rowspan=DEFAULT_SETTINGS.canvas_rowspan
         self.MOSAIC_NUM=DEFAULT_SETTINGS.MOSAIC_NUM
         self.useSSIM=DEFAULT_SETTINGS.useSSIM
+
         
         
         self.root_background_img=DEFAULT_SETTINGS.root_background_img #r"misc/gradient_blue.jpg"
@@ -1635,7 +1772,6 @@ class App:
         self.save_settings_button.grid(row=22,column=1,sticky='se')
         self.save_settings_note=tk.Label(self.root,text='Save Settings',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.save_settings_note.grid(row=23,column=1,sticky='ne')
-
     def create_move_Anno_JPEG(self):
         if self.path_Annotations.split('/')[-1]!="Annotations":
             path_anno=os.path.join(self.path_Annotations,'Annotations')
