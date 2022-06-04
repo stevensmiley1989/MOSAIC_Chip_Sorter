@@ -201,7 +201,8 @@ class popupWindowDropDown(object):
         self.top.destroy()
 
     def cancel(self):
-        self.value=str(self.clicked.get().split(':')[0])
+        #self.value=str(self.clicked.get().split(':')[0])
+        self.value='None Selected'
         self.top.destroy()
 class MOSAIC:
     def __init__(self,path_JPEGImages,path_Annotations,df_filename=None):
