@@ -17,17 +17,37 @@ It is written in Python and uses Tkinter for its graphical interface.
 As chips are selected, their corresponding Annotation/JPEG files are put in new directories with "...to_fix".  These are used later with LabelImg.py or whatever label tool to update. 
 
 
+Prerequisites
+------------------
+~~~~~~~
+.. code:: shell
+
+    cd ~/
+    git clone https://github.com/tzutalin/labelImg.git
+   
+~~~~~~~
+
+
 Installation
 ------------------
 
-Ubuntu Linux
+Linux
 ~~~~~~~
 
 Python 3 + Tkinter
 
 .. code:: shell
-
-    sudo pip3 install -r requirements.txt
+    cd ~/
+    python3 -m venv venv_MOSAIC_Chip_Sorter
+    source venv_MOSAIC_Chip_Sorter/bin/activate
+    
+    cd ~/labelImg
+    sudo apt-get install pyqt5-dev-tools
+    pip3 install -r requirements/requirements-linux-python3.txt
+    make qt5py3
+    
+    cd ~/MOSAIC_Chip_Sorter
+    pip3 install -r requirements.txt
     python3 MOSAIC_Chip_Sorter.py
 ~~~~~~~
 
@@ -37,10 +57,39 @@ Mac
 Python 3 + Tkinter
 
 .. code:: shell
-
-    sudo pip3 install -r requirements_Mac.txt
+    cd ~/
+    python3 -m venv venv_MOSAIC_Chip_Sorter
+    source venv_MOSAIC_Chip_Sorter/bin/activate
+    
+    cd ~/labelImg
+    pip3 install pyqt5 lxml # Install qt and lxml by pip
+    make qt5py3
+    
+    cd ~/MOSAIC_Chip_Sorter
+    pip3 install -r requirements_Mac.txt
     python3 MOSAIC_Chip_Sorter.py
 ~~~~~~~
+
+Windows
+~~~~~~~
+
+Python 3 + Tkinter
+
+.. code:: shell
+    cd ~/
+    python3 -m venv venv_MOSAIC_Chip_Sorter
+    ./venv_MOSAIC_Chip_Sorter/Scripts/activate
+    
+    cd ~/labelImg
+    sudo apt-get install pyqt5-dev-tools
+    pip3 install -r requirements/requirements-linux-python3.txt
+    make qt5py3
+    
+    cd ~/MOSAIC_Chip_Sorter
+    pip3 install -r requirements.txt
+    python3 MOSAIC_Chip_Sorter.py
+~~~~~~~
+
 ## [YouTube Tutorial](https://www.youtube.com/watch?v=40NyVGdOVuA&t=130s)
 
 Hotkeys
