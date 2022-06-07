@@ -1,6 +1,6 @@
-path_JPEGImages=r'/Volumes/One Touch/Images_gdrive/Drone_Images/Training/JPEGImages' #default JPEGImages directory
-path_Annotations=r'/Volumes/One Touch/Images_gdrive/Drone_Images/Training/Annotations' #default Annotations directory
-path_labelImg=r'/Volumes/One Touch/labelImg/labelImg.py' #path to labelImg.py
+path_JPEGImages=r'dataset/sample_rc_car/JPEGImages' #default JPEGImages directory
+path_Annotations=r'dataset/sample_rc_car/Annotations' #default Annotations directory
+path_labelImg=r'/home/YOUR_PATH/labelImg/labelImg.py' #path to labelImg.py
 root_background_img=r'misc/gradient_green.jpg' #path to background image for app
 predefined_classes='predefined_classes.txt' #created when using labelImg.py
 DEFAULT_ENCODING = 'utf-8'

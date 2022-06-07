@@ -30,7 +30,8 @@ User can quickly find mislabeled objects and alter them on the fly.
         'Step 12.  Open Originals with LabelIMG;
         'Step 13.  Plot DX vs DY;
         'Step 14.  Filter by DX & DY;
-        'Step 15.  Make Chips;              
+        'Step 15.  Make Chips;    
+        'Step 16.  Change Labels          
 MOSAIC_Chip_Sorter is a graphical image annotation tool.
 
 It is written in Python and uses Tkinter for its graphical interface.
@@ -172,6 +173,68 @@ def remove_directory(dir):
         except OSError:
             os.remove(path)
     os.rmdir(dir)
+def create_img_list(path_change=None):
+    '''path_change should be in the JPEGImages directory'''
+    if path_change:
+        return_dir=os.getcwd()
+        os.chdir(path_change)
+    else:
+        return_dir=os.getcwd()
+    f=open('img_list.txt','w')
+    imgs=os.listdir()
+    imgs=[w for w in imgs if w.find('.jpg')!=-1]
+    cwd=os.getcwd()
+    img_list=[os.path.join(cwd,w) for w in imgs]
+    tmp=[f.writelines(w+'\n') for w in img_list]
+    f.close()
+    os.chdir(return_dir)
+def create_imgs_from_video(Annotations_path,JPEGImages_path,path_movie=None,fps='1/2'):
+    '''path_change should be the MOV or mp4 path '''
+    time_i=str(time.time())
+    time_i=time_i.split('.')[0]
+    if str(type(fps)).find('str')==-1:
+        print('This is not a string for the fps! {}'.format(str(type(fps))))
+    elif path_movie.lower().find('.mp4')!=-1 or path_movie.lower().find('.mov')!=-1:
+        return_dir=os.getcwd()
+        
+        basepath=os.path.dirname(path_movie)
+        files=os.listdir(return_dir)
+        if 'ffmpeg.exe' in files:
+            shutil.copy('ffmpeg.exe',os.path.dirname(basepath))
+            print('Copied ffmpeg.exe to {}'.format(basepath))
+        else:
+            print('Depending on having ffmpeg installed')
+        os.chdir(basepath)
+        print(basepath)
+
+        movie_i_name=os.path.basename(path_movie).split('.')[0]
+        folders_in_basepath=os.listdir(basepath)
+        folders_in_basepath=[w for w in folders_in_basepath if os.path.isdir(os.path.join(basepath,w))]
+        JPEGImages_path=os.path.join(basepath,'JPEGImages')
+        Annotations_path=os.path.join(basepath,'Annotations')
+        if 'Annotations' not in folders_in_basepath:
+            os.makedirs(Annotations_path)
+        else:
+            #os.system('mv {} {}'.format(Annotations_path,Annotations_path+'_backup_{}'.format(time_i)))
+            Annotations_path=Annotations_path+'_'+time_i
+            os.makedirs(Annotations_path)
+        if 'JPEGImages' not in folders_in_basepath:
+            os.makedirs(JPEGImages_path)  
+        else:
+            #os.system('mv {} {}'.format(JPEGImages_path,JPEGImages_path+'_backup_{}'.format(time_i)))
+            JPEGImages_path=JPEGImages_path+'_'+time_i
+            os.makedirs(JPEGImages_path)
+
+
+        os.system('ffmpeg -i {} -qscale:v 2 -vf fps={} {}_fps{}_%08d.jpg'.format(path_movie,fps,os.path.join(JPEGImages_path,movie_i_name),fps.replace('/','d').replace('.','p')))
+        os.chdir(return_dir)
+        print('creating img list')
+        create_img_list(JPEGImages_path)
+        print('finished creating img list')
+        return Annotations_path,JPEGImages_path
+    else:
+        print('This is not a valid movie file.  Needs to be .mp4 or .MOV.  \n Provided: {}'.format(path_movie))
+        return Annotations_path,JPEGImages_path
 def FIND_REPLACE_TARGETS(targets_dic,path_annotations):
 	targets_keep=targets_dic.values()
 	#targets_keep=['transporter9']
@@ -232,6 +295,7 @@ class popupWindow(object):
     def cleanup(self):
         self.value=self.e.get()
         self.top.destroy()
+
 class popupWindowDropDown(object):
     def __init__(self,master,dic_i):
         options=[]
@@ -260,6 +324,29 @@ class popupWindowDropDown(object):
         self.value='None Selected'
         self.top.destroy()
 
+class popupWindowDropDown_FPS(object):
+    def __init__(self,master):
+        options=['30','20','10','5','1','1/2','1/5','1/10']
+        self.top=tk.Toplevel(master)
+        self.top.geometry( "{}x{}".format(ROOT_W//2,ROOT_H//2) )
+        self.top.configure(background = 'black')
+        if _platform=='darwin':
+            self.top.lift()
+        self.clicked=tk.StringVar()
+        self.clicked.set('1/2')
+        self.l=tk.OptionMenu(self.top,self.clicked,*options)
+        self.l.pack()
+        self.b=Button(self.top,text='Submit',command=self.cleanup,bg=DEFAULT_SETTINGS.root_fg, fg=DEFAULT_SETTINGS.root_bg)
+        self.b.pack()
+        self.e=Button(self.top,text='cancel',command=self.cancel,bg=DEFAULT_SETTINGS.root_fg, fg=DEFAULT_SETTINGS.root_bg)
+        self.e.pack()
+    def cleanup(self):
+        self.value=str(self.clicked.get())
+        self.top.destroy()
+    def cancel(self):
+        #self.value=str(self.clicked.get().split(':')[0])
+        self.value='None Selected'
+        self.top.destroy()
 class popupWindowChangeLabels(object):
     def __init__(self,master,dic_i,path_annotations,df):
         self.path_annotations=path_annotations
@@ -341,7 +428,7 @@ class MOSAIC:
         self.COLOR=DEFAULT_SETTINGS.COLOR #'red'
         self.path_JPEGImages=path_JPEGImages#r'/Volumes/One Touch/Images_gdrive/Drone_Images/Training/JPEGImages'
         self.path_Annotations=path_Annotations#r'/Volumes/One Touch/Images_gdrive/Drone_Images/Training/Annotations'
-        self.basePath=self.path_Annotations.replace(self.path_Annotations.split('/')[-1],"")
+        self.basePath=self.path_Annotations.replace(os.path.basename(self.path_Annotations),"")
         self.path_Annotations_tofix=os.path.join(self.basePath,'Annotations_tofix')
         self.path_JPEGImages_tofix=os.path.join(self.basePath,'JPEGImages_tofix')
         self.path_JPEGImages_tofix_bbox=os.path.join(self.basePath,'JPEGImages_tofix_bbox')
@@ -369,7 +456,7 @@ class MOSAIC:
             os.makedirs(self.path_JPEGImages_tofix_bbox)
         
         if df_filename==None:
-            self.df_filename=os.path.join(self.basePath,"df_{}.pkl".format(self.basePath.split('/')[-2]))
+            self.df_filename=os.path.join(self.basePath,"df_{}.pkl".format(os.path.basename(os.path.dirname(self.basePath))))
         else:
             self.df_filename=df_filename
     def load(self):
@@ -439,8 +526,8 @@ class MOSAIC:
         self.df_fix=self.df[self.df['checked']=='bad'].reset_index().drop('index',axis=1)
         self.unique_labels={w:i for i,w in enumerate(self.df['label_i'].unique())}
         for anno,jpg in zip(self.df_fix.path_anno_i,self.df_fix.path_jpeg_i):
-            anno_i=anno.split('/')[-1]
-            jpg_i=jpg.split('/')[-1]
+            anno_i=os.path.basename(anno) #.split('/')[-1]
+            jpg_i=os.path.basename(jpg) #.split('/')[-1]
             path_fix_anno=os.path.join(self.path_Annotations_tofix,anno_i)
             path_fix_jpeg=os.path.join(self.path_JPEGImages_tofix_bbox,jpg_i)
             self.df_to_fix_i=self.df_fix[self.df_fix['path_anno_i']==anno].reset_index().drop('index',axis=1)
@@ -472,8 +559,8 @@ class MOSAIC:
             else:
                 os.makedirs(self.path_chips_label_i)
             for anno,jpg in tqdm(zip(self.df_chips.path_anno_i,self.df_chips.path_jpeg_i)):
-                anno_i=anno.split('/')[-1]
-                jpg_i=jpg.split('/')[-1]
+                anno_i=os.path.basename(anno) #.split('/')[-1]
+                jpg_i=os.path.basename(jpg) #.split('/')[-1]
                 path_chip_anno=os.path.join(self.path_Annotations,anno_i)
                 path_chip_jpeg=os.path.join(self.path_JPEGImages,jpg_i)
                 self.df_chips_i=self.df_chips[self.df_chips['path_anno_i']==anno].reset_index().drop('index',axis=1)
@@ -509,6 +596,7 @@ class MOSAIC:
             original_root_tk.update()
             original_root_tk.deiconify()
         return self.w.value
+
     def popup_changelabels(self):
         #if _platform=='darwin':
         root_tk.withdraw()
@@ -542,8 +630,8 @@ class MOSAIC:
     def move_fix(self):
         self.df_fix=self.df[self.df['checked']=='bad'].reset_index().drop('index',axis=1)
         for anno,jpg in zip(self.df_fix.path_anno_i,self.df_fix.path_jpeg_i):
-            anno_i=anno.split('/')[-1]
-            jpg_i=jpg.split('/')[-1]
+            anno_i=os.path.basename(anno) #.split('/')[-1]
+            jpg_i=os.path.basename(jpg) #.split('/')[-1]
             if os.path.exists(os.path.join(self.path_Annotations_tofix,anno_i))==False:
                 shutil.copy(anno,self.path_Annotations_tofix)
             if os.path.exists(os.path.join(self.path_JPEGImages_tofix,jpg_i))==False:
@@ -557,8 +645,8 @@ class MOSAIC:
     def merge_fix(self):
         self.df_fix=self.df[self.df['checked']=='bad'].reset_index().drop('index',axis=1)
         for anno,jpg in zip(self.df_fix.path_anno_i,self.df_fix.path_jpeg_i):
-            anno_i=anno.split('/')[-1]
-            jpg_i=jpg.split('/')[-1]
+            anno_i=os.path.basename(anno) #.split('/')[-1]
+            jpg_i=os.path.basename(jpg)#.split('/')[-1]
             if os.path.exists(os.path.join(self.path_Annotations_tofix,anno_i))==True:
                 shutil.copy(os.path.join(self.path_Annotations_tofix,anno_i),anno)
         self.df=self.df[self.df['checked']!='bad'].reset_index().drop('index',axis=1)
@@ -1679,7 +1767,7 @@ class MOSAIC:
     def breakup_df(self):
         print(len(self.df))
         self.SPLIT_NUM=1000
-        prefix_uniques=[w.split('/')[-1].split('.')[0] for w in self.df['path_anno_i'].unique()]
+        prefix_uniques=[os.path.basename(w).split('.')[0] for w in self.df['path_anno_i'].unique()]
         if len(self.df)<self.SPLIT_NUM:
             self.SPLIT_NUM=len(self.df)
         count=0
@@ -1689,7 +1777,7 @@ class MOSAIC:
                 jpeg_list_i=[]
                 start_i=count
                 end_i=start_i+self.SPLIT_NUM-1
-                prefix_i=xml_i.split('/')[-1]
+                prefix_i=os.path.basename(xml_i) #.split('/')[-1]
                 prefix_j=xml_i.replace(prefix_i,'').rstrip('/').split('/')[-1]
                 base_path_i=xml_i.replace(prefix_i,'').replace(prefix_j,'').rstrip('/')+'__SPLIT_NUM_{}'.format(self.SPLIT_NUM)
                 if os.path.exists(base_path_i)==False:
@@ -1713,7 +1801,7 @@ class MOSAIC:
                     self.path_Annotations=new_path_i_anno
                 df_i=self.df[self.df.path_anno_i.isin(xml_list_i)].copy()
                 df_i=df_i.reset_index().drop('index',axis=1)
-                df_i_filename=os.path.join(new_path_i,'df_{}.pkl'.format(new_path_i.split('/')[-1]))
+                df_i_filename=os.path.join(new_path_i,'df_{}.pkl'.format(os.path.basename(new_path_i)))
                 df_i.to_pickle(df_i_filename)
             count+=1
     def draw_umap(self):
@@ -1823,6 +1911,7 @@ class App:
         self.icon_save_settings=ImageTk.PhotoImage(Image.open('resources/icons/save.png'))
         self.icon_scatter=ImageTk.PhotoImage(Image.open('resources/icons/scatter.png'))
         self.icon_filter=ImageTk.PhotoImage(Image.open('resources/icons/filter.png'))
+        self.icon_video=ImageTk.PhotoImage(Image.open('resources/icons/test_mp4.png'))
         self.path_JPEGImages=DEFAULT_SETTINGS.path_JPEGImages #r'/Volumes/One Touch/Images_gdrive/Drone_Images/Training/JPEGImages'
         self.path_Annotations=DEFAULT_SETTINGS.path_Annotations #r'/Volumes/One Touch/Images_gdrive/Drone_Images/Training/Annotations'
         self.path_labelImg=DEFAULT_SETTINGS.path_labelImg #r'/Volumes/One Touch/labelImg-Custom/labelImg.py'
@@ -1841,6 +1930,7 @@ class App:
         self.canvas_rowspan=DEFAULT_SETTINGS.canvas_rowspan
         self.MOSAIC_NUM=DEFAULT_SETTINGS.MOSAIC_NUM
         self.useSSIM=DEFAULT_SETTINGS.useSSIM
+        self.path_video='TBD'
 
         
         
@@ -1885,6 +1975,19 @@ class App:
         self.open_jpeg_note=tk.Label(self.root,text="1.b \n JPEGImages dir",bg=self.root_bg,fg=self.root_fg,font=("Arial", 8))
         self.open_jpeg_note.grid(row=5,column=1,sticky='ne')
 
+        self.open_video_label_var=tk.StringVar()
+        self.open_video_label_var.set(self.path_video)
+        self.open_video_button=Button(self.root,image=self.icon_folder,command=self.select_video,bg=self.root_bg,fg=self.root_fg)
+        self.open_video_button.grid(row=2,column=31,sticky='se')
+        self.create_video_button=Button(self.root,image=self.icon_video,command=self.create_JPEGImages_from_video,bg=self.root_bg,fg=self.root_fg)
+        self.create_video_button.grid(row=2,column=30,sticky='se')
+        self.open_video_note=tk.Label(self.root,text="1.c \n Create JPEGImages from Video File",bg=self.root_bg,fg=self.root_fg,font=("Arial", 8))
+        self.open_video_note.grid(row=3,column=30,sticky='ne') 
+
+        cmd_i=open_cmd+" '{}'".format(self.open_video_label_var.get())
+        self.open_video_label=Button(self.root,textvariable=self.open_video_label_var, command=partial(self.run_cmd,cmd_i),bg=self.root_fg,fg=self.root_bg,font=("Arial", 8))
+        self.open_video_label.grid(row=2,column=32,columnspan=50,sticky='sw')    
+
         cmd_i=open_cmd+" '{}'".format(self.open_jpeg_label_var.get())
         self.open_jpeg_label=Button(self.root,textvariable=self.open_jpeg_label_var, command=partial(self.run_cmd,cmd_i),bg=self.root_fg,fg=self.root_bg,font=("Arial", 8))
 
@@ -1901,20 +2004,119 @@ class App:
             self.create_df_button.grid(row=6,column=1,sticky='se')
             self.create_note=tk.Label(self.root,text='2. \n Create df    ',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
             self.create_note.grid(row=7,column=1,sticky='ne')
+            try:
+                self.open_originals_with_labelImg_note.destroy()
+            except:
+                pass
+            try:
+                self.open_originals_with_labelImg_button.destroy()
+            except:
+                pass
+            self.open_originals_with_labelImg_button=Button(self.root,image=self.icon_labelImg,command=self.open_originals_with_labelImg_START,bg=self.root_bg,fg=self.root_fg)
+            self.open_originals_with_labelImg_button.grid(row=2,column=29,sticky='se')
+            self.open_originals_with_labelImg_note=tk.Label(self.root,text='12. \n Open originals w/ labelImg.py',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+            self.open_originals_with_labelImg_note.grid(row=3,column=29,sticky='ne')
 
 
         self.save_settings_button=Button(self.root,image=self.icon_save_settings,command=self.save_settings,bg=self.root_bg,fg=self.root_fg)
         self.save_settings_button.grid(row=22,column=1,sticky='se')
         self.save_settings_note=tk.Label(self.root,text='Save Settings',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.save_settings_note.grid(row=23,column=1,sticky='ne')
+
+    def play_video(self):
+        self.open_video_label.destroy()
+        cmd_i=open_cmd+" '{}'".format(self.open_video_label_var.get())
+        self.open_video_label=Button(self.root,textvariable=self.open_video_label_var, command=partial(self.run_cmd,cmd_i),bg=self.root_fg,fg=self.root_bg,font=("Arial", 8))
+        self.open_video_label.grid(row=2,column=32,columnspan=50,sticky='sw')      
+
+    def select_video(self,):
+        
+        filetypes=(('mp4','*.mp4'),('MP4','*.MP4'),('MOV','*.MOV'),('All files','*.*'))
+        self.filename=fd.askopenfilename(title='Open a file',
+                                    initialdir=self.CWD,
+                                    filetypes=filetypes)
+        if os.path.exists(self.filename):
+            print('Yes {}'.format(self.filename))
+        else:
+            print('No {}'.format(self.filename))
+        self.path_video=self.filename
+        self.open_video_label_var.set(self.filename)
+        if os.path.exists(self.path_video):
+            pass
+        self.play_video()
+
+        showinfo(title='Selected File',
+                 message=self.filename)
+    def popup_fps(self):
+        if _platform=='darwin':
+            root_tk.withdraw()
+        root_tk.title('Select the desired FPS from the dropdown')
+        original_root_tk=root_tk
+        self.w=popupWindowDropDown_FPS(root_tk)
+        original_root_tk.wait_window(self.w.top)
+        print(self.w.value)
+        root_tk.title("MOSAIC Chip Sorter")
+        if _platform=='darwin':
+            original_root_tk.update()
+            original_root_tk.deiconify()
+        return self.w.value
+    def create_JPEGImages_from_video(self):
+        if os.path.exists(self.path_video):
+            video_filename=os.path.join(os.path.dirname(self.path_video),os.path.basename(self.path_video).split('.')[0])
+            if os.path.exists(video_filename)==False:
+                os.makedirs(video_filename)
+            else:
+                shutil.move(video_filename,video_filename+'_backup_{}'.format(str(time.time()).split('.')[0]))
+                os.makedirs(video_filename)
+            video_filepath=os.path.join(os.path.dirname(self.path_video),video_filename)
+            shutil.copy(self.path_video,video_filepath)
+            self.path_video=os.path.join(video_filepath,os.path.basename(self.path_video))
+            fps=self.popup_fps()
+            new_anno_path,new_jpeg_path=create_imgs_from_video(self.path_Annotations,self.path_JPEGImages,path_movie=self.path_video,fps=fps)
+            self.path_Annotations=new_anno_path
+            self.path_JPEGImages=new_jpeg_path
+
+
+            self.anno_selected=True
+            self.open_anno_label_var.set(self.path_Annotations)
+            self.open_anno_label.destroy()
+            del self.open_anno_label
+            cmd_i=open_cmd+" '{}'".format(self.open_anno_label_var.get())
+            self.open_anno_label=Button(self.root,textvariable=self.open_anno_label_var, command=partial(self.run_cmd,cmd_i),bg=self.root_fg,fg=self.root_bg,font=("Arial", 8))
+            #self.open_anno_label=tk.Label(self.root,textvariable=self.open_anno_label_var)
+            self.open_anno_label.grid(row=2,column=2,columnspan=50,sticky='sw')
+            print(self.path_Annotations)
+
+            self.jpeg_selected=True
+            self.open_jpeg_label_var.set(self.path_JPEGImages)
+            self.open_jpeg_label.destroy()
+            del self.open_jpeg_label
+            cmd_i=open_cmd+" '{}'".format(self.open_jpeg_label_var.get())
+            self.open_jpeg_label=Button(self.root,textvariable=self.open_jpeg_label_var, command=partial(self.run_cmd,cmd_i),bg=self.root_fg,fg=self.root_bg,font=("Arial", 8))
+            #self.open_jpeg_label=tk.Label(self.root,textvariable=self.open_jpeg_label_var)
+            self.open_jpeg_label.grid(row=4,column=2,columnspan=50,sticky='sw')
+            print(self.path_JPEGImages)
+            try:
+                self.open_originals_with_labelImg_note.destroy()
+            except:
+                pass
+            try:
+                self.open_originals_with_labelImg_button.destroy()
+            except:
+                pass
+            self.open_originals_with_labelImg_button=Button(self.root,image=self.icon_labelImg,command=self.open_originals_with_labelImg_START,bg=self.root_bg,fg=self.root_fg)
+            self.open_originals_with_labelImg_button.grid(row=2,column=29,sticky='se')
+            self.open_originals_with_labelImg_note=tk.Label(self.root,text='12. \n Open originals w/ labelImg.py',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+            self.open_originals_with_labelImg_note.grid(row=3,column=29,sticky='ne')
+
     def create_move_Anno_JPEG(self):
-        if self.path_Annotations.split('/')[-1]!="Annotations":
+        if os.path.basename(self.path_Annotations)!="Annotations":
             path_anno=os.path.join(self.path_Annotations,'Annotations')
             if os.path.exists(path_anno)==False:
                 os.makedirs(path_anno)
             [shutil.move(os.path.join(self.path_Annotations,w),path_anno) for w in os.listdir(self.path_Annotations) if w.find('.xml')!=-1]
             self.path_Annotations=path_anno
-        if self.path_JPEGImages.split('/')[-1]!="JPEGImages":
+        if os.path.basename(self.path_JPEGImages)!="JPEGImages":
             path_jpegs=os.path.join(self.path_JPEGImages,'JPEGImages')
             if os.path.exists(path_jpegs)==False:
                 os.makedirs(path_jpegs)
@@ -1985,9 +2187,26 @@ class App:
             self.popup_text='Please provide a valid labelImg.py path. \n  Current path is: {}'.format(self.path_labelImg)
             self.fix_with_labelImg_error=tk.Label(self.root,text=self.popup_text, bg=self.root_bg,fg=self.root_fg,font=("Arial", 8))
             self.fix_with_labelImg_error.grid(row=23,column=32,sticky='s')
-            self.fix_with_labelImg_error_button=Button(self.root,image=self.icon_folder, command=partial(self.select_file,self.path_labelImg),bg=self.root_bg,fg=self.root_fg)
+            self.fix_with_labelImg_error_button=Button(self.root,image=self.icon_folder, command=partial(self.select_file_START,self.path_labelImg),bg=self.root_bg,fg=self.root_fg)
             self.fix_with_labelImg_error_button.grid(row=22,column=32,sticky='s')
 
+    def open_originals_with_labelImg_START(self):
+        self.path_labelImg_image_dir=self.path_JPEGImages
+        self.path_labelImg_predefined_classes_file=os.path.join(os.path.dirname(self.path_JPEGImages),self.predefined_classes)
+        if os.path.exists(self.path_labelImg_predefined_classes_file)==False:
+            f=open(self.path_labelImg_predefined_classes_file,'w')
+            f.writelines('TBD \n')
+            f.close()
+        self.path_labelImg_save_dir=self.path_Annotations
+        if os.path.exists(self.path_labelImg):
+            self.cmd_i='{} "{}" "{}" "{}" "{}"'.format(self.PYTHON_PATH ,self.path_labelImg,self.path_labelImg_image_dir,self.path_labelImg_predefined_classes_file,self.path_labelImg_save_dir)
+            self.labelImg=Thread(target=self.run_cmd,args=(self.cmd_i,)).start()
+        else:
+            self.popup_text='Please provide a valid labelImg.py path. \n  Current path is: {}'.format(self.path_labelImg)
+            self.fix_with_labelImg_error=tk.Label(self.root,text=self.popup_text, bg=self.root_bg,fg=self.root_fg,font=("Arial", 8))
+            self.fix_with_labelImg_error.grid(row=3,column=28,sticky='s')
+            self.fix_with_labelImg_error_button=Button(self.root,image=self.icon_folder, command=partial(self.select_file_START,self.path_labelImg),bg=self.root_bg,fg=self.root_fg)
+            self.fix_with_labelImg_error_button.grid(row=4,column=28,sticky='s')
 
     def pad(self,text_i,max_i):
         while len(text_i)!=max_i:
@@ -2008,6 +2227,23 @@ class App:
             self.fix_with_labelImg()
         showinfo(title='Selected File',
                  message=self.filename)
+
+    def select_file_START(self,file_i):
+        filetypes=(('py','*.py'),('All files','*.*'))
+        self.filename=fd.askopenfilename(title='Open a file',
+                                    initialdir=self.CWD,
+                                    filetypes=filetypes)
+        if file_i==self.path_labelImg:
+            self.path_labelImg=self.filename
+            if os.path.exists(self.path_labelImg):
+                self.fix_with_labelImg_error.grid_forget()
+                self.fix_with_labelImg_error_button.grid_forget()
+                del self.fix_with_labelImg_error
+                del self.fix_with_labelImg_error_button
+            self.open_originals_with_labelImg_START()
+        showinfo(title='Selected File',
+                 message=self.filename)
+
 
     def select_folder(self,folder_i,title_i,var_i=None):
         filetypes=(('All files','*.*'))
@@ -2142,6 +2378,12 @@ class App:
     def create_df(self):
         self.MOSAIC=MOSAIC(self.path_JPEGImages,self.path_Annotations)
         self.MOSAIC.create_df()
+        if os.path.exists(self.MOSAIC.df_filename)==True:
+            self.load_df_button=Button(self.root,image=self.icon_load,command=self.load_df,bg=self.root_bg,fg=self.root_fg)
+            self.load_df_button.grid(row=8,column=1,sticky='se')
+            self.load_note=tk.Label(self.root,text='3. \n Load df     ',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+            self.load_note.grid(row=9,column=1,sticky='ne')
+        self.load_df()
     def load_df(self):
         self.MOSAIC.load()
         self.options=list(self.MOSAIC.unique_labels.keys())
@@ -2205,7 +2447,14 @@ class App:
         self.UMAP_button.grid(row=20,column=31,sticky='se')
         self.UMAP_note=tk.Label(self.root,text='11. \n UMAP',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.UMAP_note.grid(row=21,column=31,sticky='ne')
-
+        try:
+            self.open_originals_with_labelImg_note.destroy()
+        except:
+            pass
+        try:
+            self.open_originals_with_labelImg_button.destroy()
+        except:
+            pass
         self.open_originals_with_labelImg_button=Button(self.root,image=self.icon_labelImg,command=self.open_originals_with_labelImg,bg=self.root_bg,fg=self.root_fg)
         self.open_originals_with_labelImg_button.grid(row=20,column=32,sticky='se')
         self.open_originals_with_labelImg_note=tk.Label(self.root,text='12. \n Open originals w/ labelImg.py',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
