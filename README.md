@@ -90,7 +90,7 @@ Python 3 + Tkinter
     python3 MOSAIC_Chip_Sorter.py
 ~~~~~~~
 
-## [YouTube Tutorial](https://www.youtube.com/watch?v=40NyVGdOVuA&t=130s)
+## [YouTube Tutorial](https://youtu.be/owG0nSGpdCQ)
 
 Hotkeys
 ------------------
