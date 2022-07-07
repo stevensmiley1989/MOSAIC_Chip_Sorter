@@ -237,6 +237,7 @@ def create_imgs_from_video(Annotations_path,JPEGImages_path,path_movie=None,fps=
         return Annotations_path,JPEGImages_path
 def FIND_REPLACE_TARGETS(targets_dic,path_annotations):
 	targets_keep=targets_dic.values()
+	print('targets_keep',targets_keep)
 	#targets_keep=['transporter9']
 	#path_annotations="/media/steven/Elements/Drone_Videos/Combined_Transporter9_withVisDrone_noanno/Annotations"
 	path_annotations_new=path_annotations
@@ -250,6 +251,8 @@ def FIND_REPLACE_TARGETS(targets_dic,path_annotations):
 		file_new=os.path.join(path_annotations_new,file)
 		f=open(file_og,'r')
 		f_read=f.readlines()
+		if len(f_read)==1:
+			f_read=f_read[0].replace('><','>\n<')
 		f.close()
 		f_new=[]
 		for i,line in enumerate(f_read):
@@ -369,18 +372,24 @@ class popupWindowChangeLabels(object):
         self.new_labels_og.grid(row=0,column=1,sticky='se')
         self.new_labels_new=tk.Label(self.top,text="NEW VALUE",bg=DEFAULT_SETTINGS.root_fg, fg=DEFAULT_SETTINGS.root_bg,font=("Arial", 8))
         self.new_labels_new.grid(row=0,column=2,sticky='s')
+        ii=0
+        j=0
         for i,(k,v) in enumerate(dic_i.items()):
             i+=1
+            if i%25==0:
+                ii=0
+                j+=2
+            ii+=1
             self.new_dic[k]=tk.StringVar()
             self.new_dic[k].set(k)
             self.new_labels[k]=tk.Label(self.top,text=k+":",bg=DEFAULT_SETTINGS.root_bg, fg=DEFAULT_SETTINGS.root_fg)
-            self.new_labels[k].grid(row=i+1,column=1,sticky='ne')
+            self.new_labels[k].grid(row=ii+1,column=1+j,sticky='ne')
             self.new_Entries[k]=tk.Entry(self.top,textvariable=self.new_dic[k])
-            self.new_Entries[k].grid(row=i+1,column=2,sticky='nw')
+            self.new_Entries[k].grid(row=ii+1,column=2+j,sticky='nw')
         self.b=Button(self.top,text='Submit',command=self.cleanup,bg=DEFAULT_SETTINGS.root_fg,fg=DEFAULT_SETTINGS.root_bg)
-        self.b.grid(row=i+2,column=3,sticky='s')
+        self.b.grid(row=2,column=3+j,sticky='s')
         self.e=Button(self.top,text='cancel',command=self.cancel,bg=DEFAULT_SETTINGS.root_fg,fg=DEFAULT_SETTINGS.root_bg)
-        self.e.grid(row=i+3,column=3,sticky='s')
+        self.e.grid(row=3,column=3+j,sticky='s')
     def cleanup(self):
         targets_dic={}
         for i,(k,v) in enumerate(self.new_dic.items()):
@@ -408,6 +417,9 @@ class popupWindowChangeLabels(object):
         self.canvas=tk.Canvas(self.top,width=ROOT_W,height=ROOT_H)
         self.canvas.grid(row=0,column=0,columnspan=DEFAULT_SETTINGS.canvas_columnspan,rowspan=DEFAULT_SETTINGS.canvas_rowspan,sticky='nw')
         self.canvas.create_image(0,0,image=self.bg,anchor='nw')
+
+
+
 class MOSAIC:
     def __init__(self,path_JPEGImages,path_Annotations,df_filename=None):
         self.DEFAULT_ENCODING = DEFAULT_SETTINGS.DEFAULT_ENCODING #'utf-8'
@@ -464,6 +476,7 @@ class MOSAIC:
         #df=pd.DataFrame(columns=['xmin','xmax','ymin','ymax','width','height','label_i','path_jpeg_i','path_anno_i'],dtype='object')
         self.int_cols=['xmin','xmax','ymin','ymax','width','height']
         for int_col in tqdm(self.int_cols):
+            self.df[int_col]=[int(np.floor(float(w))) for w in self.df[int_col]]
             self.df[int_col]=self.df[int_col].astype(int)
         if 'checked' not in self.df.columns:
             self.df['checked']=self.df['path_anno_i'].copy()
@@ -491,6 +504,33 @@ class MOSAIC:
         self.df['label_i_int']=self.df['label_i'].copy()
         self.df['label_i_int']=[self.label_dic[w] for w in self.df['label_i']]
         self.rev_label_dic={v:k for k,v in self.label_dic.items()}
+
+    def remove_blanks(self):
+        unique_annos_notblank=self.df.path_anno_i.unique()
+        unique_annos_total=os.listdir(self.path_Annotations)
+        unique_annos_total=[os.path.abspath(os.path.join(self.path_Annotations,w)) for w in unique_annos_total]
+
+        blank_annos=list(set(unique_annos_total)-set(unique_annos_notblank))
+        if len(blank_annos)>0:
+            print('removing blank annos')
+            for blank in tqdm(blank_annos):
+                
+                os.remove(blank)
+        else:
+            print('no blank annos')
+
+        unique_jpegs_notblank=self.df.path_jpeg_i.unique()
+        unique_jpegs_total=os.listdir(self.path_JPEGImages)
+        unique_jpegs_total=[os.path.abspath(os.path.join(self.path_JPEGImages,w)) for w in unique_jpegs_total]
+        blank_jpegs=list(set(unique_jpegs_total)-set(unique_jpegs_notblank))
+        if len(blank_jpegs)>0:
+            print('removing blank jpegs')
+            for blank in tqdm(blank_jpegs):
+                os.remove(blank)
+        else:
+            print('no blank jpegs')
+
+
         
     def plot_dx_dy(self):
         if _platform!='darwin':
@@ -1754,6 +1794,17 @@ class MOSAIC:
             #     except:
             #         self.chip_i=self.jpg_i[self.ymin_i:self.ymax_i,self.xmin_i:self.xmax_i,:]
             #         self.chip_square_i=Image.fromarray(self.chip_i)    
+            def to_rgb2(im):
+                w,h=im.shape
+                ret=np.empty((w,h,3),dtype=np.uint8)
+                ret[:,:,:]=im[:,:,np.newaxis]
+                return ret
+            if len(self.jpg_i.shape)!=3:
+                self.jpg_i=to_rgb2(self.jpg_i)
+            if self.ymin_i==self.ymax_i:
+                self.ymax_i+=1
+            if self.xmin_i==self.xmax_i:
+                self.xmax_i+=1
             self.chip_i=self.jpg_i[self.ymin_i:self.ymax_i,self.xmin_i:self.xmax_i,:]
             try:
                 self.chip_square_i=Image.fromarray(self.chip_i) 
@@ -2507,7 +2558,12 @@ class App:
         self.change_labels_button=Button(self.root,image=self.icon_create,command=self.change_labels,bg=self.root_bg,fg=self.root_fg)
         self.change_labels_button.grid(row=11,column=31,sticky='se')
         self.change_labels_note=tk.Label(self.root,text='16. \n Change Labels',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
-        self.change_labels_note.grid(row=12,column=31,sticky='ne')        
+        self.change_labels_note.grid(row=12,column=31,sticky='ne') 
+
+        self.remove_blanks_button=Button(self.root,image=self.icon_clear_fix,command=self.remove_blanks,bg=self.root_bg,fg=self.root_fg)
+        self.remove_blanks_button.grid(row=13,column=31,sticky='se')
+        self.remove_blanks_note=tk.Label(self.root,text='17. \n Remove Blanks',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.remove_blanks_note.grid(row=14,column=31,sticky='ne')          
 
     def get_DXDY(self):
         self.DX_MAX=int(self.DX_MAX_VAR.get())
@@ -2559,6 +2615,10 @@ class App:
         self.update_counts('na')
     def change_labels(self):
         self.MOSAIC.popup_changelabels()
+        self.load_df()
+        self.update_counts('na')
+    def remove_blanks(self):
+        self.MOSAIC.remove_blanks()
         self.load_df()
         self.update_counts('na')
     def get_update_background_img(self):
