@@ -299,6 +299,38 @@ class popupWindow(object):
         self.value=self.e.get()
         self.top.destroy()
 
+class popupWindow_REMOVEBLANKS(object):
+    def __init__(self,master,blank_annos,blank_jpegs):
+        self.top=tk.Toplevel(master)
+        self.top.geometry( "{}x{}".format(ROOT_W//2,ROOT_H//2) )
+        self.top.configure(background = 'black')
+        self.l=Button(self.top,text="Yes",command=self.cleanup_yes,bg=DEFAULT_SETTINGS.root_fg, fg=DEFAULT_SETTINGS.root_bg)
+        self.l.pack()
+        self.e=Button(self.top,text="No",command=self.cleanup_no,bg=DEFAULT_SETTINGS.root_fg, fg=DEFAULT_SETTINGS.root_bg)
+        self.e.pack()
+        self.clicked_anno=tk.StringVar()
+        if len(blank_annos)>0:
+            self.clicked_anno.set(blank_annos[0])
+        else:
+            blank_annos=['No Blank Annotations Found']
+            self.clicked_anno.set(blank_annos[0])
+        self.opt_anno=tk.OptionMenu(self.top,self.clicked_anno,*blank_annos)
+        self.opt_anno.pack()
+        self.clicked_jpeg=tk.StringVar()
+        if len(blank_jpegs)>0:
+            self.clicked_jpeg.set(blank_jpegs[0])
+        else:
+            blank_jpegs=['No Blank JPEGs Found']
+            self.clicked_jpeg.set(blank_jpegs[0])
+        self.opt_jpegs=tk.OptionMenu(self.top,self.clicked_jpeg,*blank_jpegs)
+        self.opt_jpegs.pack()
+    def cleanup_yes(self):
+        self.value="Yes"
+        self.top.destroy()
+    def cleanup_no(self):
+        self.value="No"
+        self.top.destroy()
+
 class popupWindowDropDown(object):
     def __init__(self,master,dic_i):
         options=[]
@@ -507,30 +539,45 @@ class MOSAIC:
 
     def remove_blanks(self):
         unique_annos_notblank=self.df.path_anno_i.unique()
+        unique_annos_notblank=[os.path.abspath(os.path.join(self.path_Annotations,os.path.basename(w))) for w in unique_annos_notblank]
         unique_annos_total=os.listdir(self.path_Annotations)
         unique_annos_total=[os.path.abspath(os.path.join(self.path_Annotations,w)) for w in unique_annos_total]
 
         blank_annos=list(set(unique_annos_total)-set(unique_annos_notblank))
-        if len(blank_annos)>0:
-            print('removing blank annos')
-            for blank in tqdm(blank_annos):
-                
-                os.remove(blank)
-        else:
-            print('no blank annos')
+        self.blank_annos=blank_annos
+
 
         unique_jpegs_notblank=self.df.path_jpeg_i.unique()
+        unique_jpegs_notblank=[os.path.abspath(os.path.join(self.path_JPEGImages,os.path.basename(w))) for w in unique_jpegs_notblank]
         unique_jpegs_total=os.listdir(self.path_JPEGImages)
         unique_jpegs_total=[os.path.abspath(os.path.join(self.path_JPEGImages,w)) for w in unique_jpegs_total]
         blank_jpegs=list(set(unique_jpegs_total)-set(unique_jpegs_notblank))
-        if len(blank_jpegs)>0:
-            print('removing blank jpegs')
-            for blank in tqdm(blank_jpegs):
-                os.remove(blank)
-        else:
-            print('no blank jpegs')
+        self.blank_jpegs=blank_jpegs
+        self.popup_remove_blanks()
+        if self.w.value=="Yes":
+            if len(blank_annos)>0:
+                print('removing blank annos')
+                for blank in tqdm(blank_annos):
+                    
+                    os.remove(blank)
+            else:
+                print('no blank annos')
 
 
+            if len(blank_jpegs)>0:
+                print('removing blank jpegs')
+                for blank in tqdm(blank_jpegs):
+                    os.remove(blank)
+            else:
+                print('no blank jpegs')
+
+    def popup_remove_blanks(self):
+        root_tk.title('Do you want to remove these blanks?')
+        self.w=popupWindow_REMOVEBLANKS(root_tk,self.blank_annos,self.blank_jpegs)
+        root_tk.wait_window(self.w.top)
+        print(self.w.value)
+        root_tk.title("MOSAIC Chip Sorter")
+        return self.w.value
         
     def plot_dx_dy(self):
         if _platform!='darwin':
