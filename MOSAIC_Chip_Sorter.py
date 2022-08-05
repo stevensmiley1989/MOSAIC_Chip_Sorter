@@ -105,6 +105,7 @@ UMAP Hotkeys
 ~~~~~~~
 
 '''
+import argparse
 import sys
 from sys import platform as _platform
 import pandas as pd
@@ -2056,7 +2057,7 @@ class MOSAIC:
 
 
 class App:
-    def __init__(self,root_tk):
+    def __init__(self,root_tk,path_Annotations='None',path_JPEGImages='None'):
         self.root=root_tk
         self.root.bind('<Escape>',self.close)
         self.root.wm_iconphoto(False,ImageTk.PhotoImage(Image.open("resources/icons/appM.png")))
@@ -2075,8 +2076,14 @@ class App:
         self.icon_scatter=ImageTk.PhotoImage(Image.open('resources/icons/scatter.png'))
         self.icon_filter=ImageTk.PhotoImage(Image.open('resources/icons/filter.png'))
         self.icon_video=ImageTk.PhotoImage(Image.open('resources/icons/test_mp4.png'))
-        self.path_JPEGImages=DEFAULT_SETTINGS.path_JPEGImages #r'/Volumes/One Touch/Images_gdrive/Drone_Images/Training/JPEGImages'
-        self.path_Annotations=DEFAULT_SETTINGS.path_Annotations #r'/Volumes/One Touch/Images_gdrive/Drone_Images/Training/Annotations'
+        if path_JPEGImages=='None':
+            self.path_JPEGImages=DEFAULT_SETTINGS.path_JPEGImages #r'/Volumes/One Touch/Images_gdrive/Drone_Images/Training/JPEGImages'
+        else:
+            self.path_JPEGImages=path_JPEGImages
+        if path_Annotations=='None':
+            self.path_Annotations=DEFAULT_SETTINGS.path_Annotations #r'/Volumes/One Touch/Images_gdrive/Drone_Images/Training/Annotations'
+        else:
+            self.path_Annotations=path_Annotations
         self.path_labelImg=DEFAULT_SETTINGS.path_labelImg #r'/Volumes/One Touch/labelImg-Custom/labelImg.py'
         self.jpeg_selected=False #after  user has opened from folder dialog the jpeg folder, this returns True
         self.anno_selected=False #after user has opened from folder dialog the annotation folder, this returns True
@@ -2745,7 +2752,13 @@ class App:
 
 
 if __name__=='__main__':
-    my_app=App(root_tk)
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--path_JPEGImages",type=str,default='None',help='path JPEGImages')
+    ap.add_argument("--path_Annotations",type=str,default='None',help='path Annotations')
+    args = vars(ap.parse_args())
+    path_JPEGImages=args['path_JPEGImages']
+    path_Annotations=args['path_Annotations']
+    my_app=App(root_tk,path_Annotations,path_JPEGImages)
     my_app.root.mainloop()
 
 
