@@ -164,6 +164,19 @@ ROOT_H=int(root_tk.winfo_screenheight()*0.95)
 ROOT_W=int(root_tk.winfo_screenwidth()*0.95)
 print('ROOT_H',ROOT_H)
 print('ROOT_W',ROOT_W)
+from pandastable import Table, TableModel
+class TestApp(tk.Frame):
+    def __init__(self, parent, filepath):
+        super().__init__(parent)
+        self.table = Table(self, showtoolbar=True, showstatusbar=True)
+        if filepath.find('.csv') and os.path.exists(filepath)==False:
+            pklpath=filepath.replace('.csv','.pkl')
+            df_i=pd.read_pickle(pklpath)
+            df_i.to_csv(filepath,index=None)
+        self.table.importCSV(filepath)
+        #self.table.load(filepath)
+        #self.table.resetIndex()
+        self.table.show()
 def remove_directory(dir):
     #dir = 'path/to/dir'
     for files in os.listdir(dir):
@@ -501,10 +514,13 @@ class MOSAIC:
         
         if df_filename==None:
             self.df_filename=os.path.join(self.basePath,"df_{}.pkl".format(os.path.basename(os.path.dirname(self.basePath))))
+            self.df_filename_csv=self.df_filename.replace('.pkl','.csv')
         else:
             self.df_filename=df_filename
+            self.df_filename_csv=self.df_filename.replace('.pkl','.csv')
     def load(self):
         self.df=pd.read_pickle(self.df_filename)
+        self.df_filename_csv=self.df_filename.replace('.pkl','.csv')
         #df=pd.DataFrame(columns=['xmin','xmax','ymin','ymax','width','height','label_i','path_jpeg_i','path_anno_i'],dtype='object')
         self.int_cols=['xmin','xmax','ymin','ymax','width','height']
         for int_col in tqdm(self.int_cols):
@@ -536,6 +552,7 @@ class MOSAIC:
         self.df['label_i_int']=self.df['label_i'].copy()
         self.df['label_i_int']=[self.label_dic[w] for w in self.df['label_i']]
         self.rev_label_dic={v:k for k,v in self.label_dic.items()}
+        self.SHOWTABLE_BUTTONS()
 
     def remove_blanks(self):
         unique_annos_notblank=self.df.path_anno_i.unique()
@@ -570,6 +587,36 @@ class MOSAIC:
                     os.remove(blank)
             else:
                 print('no blank jpegs')
+    def SHOWTABLE_BUTTONS(self):
+        self.popup_SHOWTABLE_button=Button(root_tk,text='Show df',command=self.popupWindow_showtable,bg=DEFAULT_SETTINGS.root_fg,fg=DEFAULT_SETTINGS.root_bg)
+        self.popup_SHOWTABLE_button.grid(row=8,column=2,sticky='sw')
+
+    def popupWindow_showtable(self):
+        try:
+            self.top.destroy()
+        except:
+            pass
+        self.top=tk.Toplevel(root_tk)
+        self.top.geometry( "{}x{}".format(int(root_tk.winfo_screenwidth()*0.95//1.5),int(root_tk.winfo_screenheight()*0.95//1.5)) )
+        self.top.configure(background = 'black')
+        self.b=Button(self.top,text='Close',command=self.cleanup_show,bg=DEFAULT_SETTINGS.root_fg, fg=DEFAULT_SETTINGS.root_bg)
+        self.b.pack()
+        self.show_table()
+    def cleanup_show(self):
+        self.app.table.saveAs(self.df_filename_csv)
+        print('self.df_filename')
+        print(self.df_filename_csv)
+        df_i=pd.read_csv(self.df_filename_csv,index_col=None)
+        columns=df_i.columns
+        drop_columns=[w for w in columns if w.find('Unnamed')!=-1]
+        df_i.drop(drop_columns,axis=1,inplace=True)
+        df_i.to_pickle(self.df_filename,protocol=2)
+        df_i.to_csv(self.df_filename_csv,index=None)
+        self.load()
+        self.top.destroy()
+    def show_table(self):
+        self.app = TestApp(self.top, self.df_filename_csv)
+        self.app.pack(fill=tk.BOTH, expand=1)
 
     def popup_remove_blanks(self):
         root_tk.title('Do you want to remove these blanks?')
@@ -606,6 +653,7 @@ class MOSAIC:
     def filter_dxdy(self,DX_MIN,DX_MAX,DY_MIN,DY_MAX):
         self.df=self.df[(self.df['DX']>=DX_MIN) & (self.df['DX']<=DX_MAX) & (self.df['DY']>=DY_MIN) & (self.df['DY']<=DY_MAX)].reset_index().drop('index',axis=1)
         self.df.to_pickle(self.df_filename)
+        self.df.to_csv(self.df_filename_csv,index=None)
 
 
 
@@ -699,6 +747,7 @@ class MOSAIC:
         original_root_tk.deiconify()
         self.df=self.w.df
         self.df.to_pickle(self.df_filename)
+        self.df.to_csv(self.df_filename_csv,index=None)
         return self.w.value
     def draw_objects(self,draw, xmin,xmax,ymin,ymax,label_i,path_fix_jpeg,image):
         """Draws the bounding box and label for each object."""
@@ -806,6 +855,7 @@ class MOSAIC:
                 self.df.at[i,'checked']=''
                 i+=1
         self.df.to_pickle(self.df_filename)
+        self.df.to_csv(self.df_filename_csv,index=None)
     def create_df(self):
         self.Annotations_list=list(os.listdir(self.path_Annotations))
         self.Annotations=[os.path.join(self.path_Annotations,Anno) for Anno in self.Annotations_list if Anno.find(self.XML_EXT)!=-1]
@@ -844,6 +894,7 @@ class MOSAIC:
                 self.df.at[i,'path_anno_i']=path_anno_i
                 i+=1
         self.df.to_pickle(self.df_filename)
+        self.df.to_csv(self.df_filename_csv,index=None)
     def update_checked(self):
         not_checked=str(len(self.df[(self.df['checked']=="")&(self.df['label_i']==self.target_i)]))
         #print('not checked_total = ',not_checked_total)
@@ -880,6 +931,7 @@ class MOSAIC:
             cv2.destroyAllWindows() #edit sjs 6/3/2022
             self.close_window=True
         self.df.to_pickle(self.df_filename)
+        self.df.to_csv(self.df_filename_csv,index=None)
     def onclick(self,event):
         #global df_i,axes_list,df,title_list,img_list
         print('%s click: button=%d, x=%d, y=%d, xdata=%f, ydata=%f' %
@@ -929,6 +981,7 @@ class MOSAIC:
                 #plt.pause(1e-3)
                 break
         self.df.to_pickle(self.df_filename)
+        self.df.to_csv(self.df_filename_csv,index=None)
     def onclick_select_mosaic(self,event):
         #global df_i,axes_list,df,title_list,img_list
         print('%s click: button=%d, x=%d, y=%d, xdata=%f, ydata=%f' %
@@ -1077,6 +1130,7 @@ class MOSAIC:
                             [f.writelines(w) for w in f_new]
                             f.close()  
                             self.df.to_pickle(self.df_filename)
+                            self.df.to_csv(self.df_filename_csv,index=None)
                         except:
                             print('This ship has sailed, item not found.')
                         self.title_list[j].set_text('{} = DELETED'.format(self.dic[j]))
@@ -1125,6 +1179,7 @@ class MOSAIC:
                             [f.writelines(w) for w in f_new]
                             f.close()  
                             self.df.to_pickle(self.df_filename)
+                            self.df.to_csv(self.df_filename_csv,index=None)
                             self.title_list[j].set_text('{}'.format(self.df['label_i'][self.index_bad]))
                             self.title_list[j].set_color('green')
                             break    
@@ -1371,6 +1426,7 @@ class MOSAIC:
             print('fixing it')
             self.df.at[self.index_bad,'checked']="bad"
             self.df.to_pickle(self.df_filename)
+            self.df.to_csv(self.df_filename_csv,index=None)
             try:
                 cv2.destroyAllWindows()
             except:
@@ -1435,6 +1491,7 @@ class MOSAIC:
                 [f.writelines(w) for w in f_new]
                 f.close()  
                 self.df.to_pickle(self.df_filename)
+                self.df.to_csv(self.df_filename_csv,index=None)
                 try:
                     cv2.destroyAllWindows()
                 except:
@@ -1486,6 +1543,7 @@ class MOSAIC:
                 [f.writelines(w) for w in f_new]
                 f.close()  
                 self.df.to_pickle(self.df_filename)
+                self.df.to_csv(self.df_filename_csv,index=None)
                 try:
                     cv2.destroyAllWindows()
                 except:
@@ -1531,6 +1589,7 @@ class MOSAIC:
             print('fixing it')
             self.df.at[self.index_bad,'checked']="bad"
             self.df.to_pickle(self.df_filename)
+            self.df.to_csv(self.df_filename_csv,index=None)
             try:
                 cv2.destroyAllWindows()
             except:
@@ -1602,6 +1661,7 @@ class MOSAIC:
                 [f.writelines(w) for w in f_new]
                 f.close()  
                 self.df.to_pickle(self.df_filename)
+                self.df.to_csv(self.df_filename_csv,index=None)
                 try:
                     cv2.destroyAllWindows()
                 except:
@@ -1646,6 +1706,7 @@ class MOSAIC:
                 [f.writelines(w) for w in f_new]
                 f.close()  
                 self.df.to_pickle(self.df_filename)
+                self.df.to_csv(self.df_filename_csv,index=None)
                 try:
                     cv2.destroyAllWindows()
                 except:
@@ -1822,6 +1883,7 @@ class MOSAIC:
             #    time.sleep(0.1)
             #    pass
             self.df.to_pickle(self.df_filename)
+            self.df.to_csv(self.df_filename_csv,index=None)
     def get_umap_input(self):
         self.df=self.df.reset_index().drop('index',axis=1)
         for i in tqdm(range(len(self.df))):
@@ -1862,6 +1924,7 @@ class MOSAIC:
             self.chip_square_i=np.array(self.chip_square_i)
             self.df.at[i,'umap_input']=self.chip_square_i
         self.df.to_pickle(self.df_filename)
+        self.df.to_csv(self.df_filename_csv,index=None)
     def breakup_df(self):
         print(len(self.df))
         self.SPLIT_NUM=1000
@@ -1912,6 +1975,7 @@ class MOSAIC:
                 i+=1       
         self.rev_label_dic={v:k for k,v in self.label_dic.items()}
         self.df.to_pickle(self.df_filename)
+        self.df.to_csv(self.df_filename_csv,index=None)
         self.fig_j=plt.figure(figsize=(self.FIGSIZE_W,self.FIGSIZE_H),num='UMAP.  "Double Click" to inspect.  Press "q" to quit.    Press "m" for MOSAIC.')
         self.fig_j.set_size_inches((self.FIGSIZE_INCH_W, self.FIGSIZE_INCH_W))
         self.cidj = self.fig_j.canvas.mpl_connect('button_press_event', self.onclick_show)
@@ -1947,7 +2011,8 @@ class MOSAIC:
             plt.ylim([self.a_ymin,self.a_ymax])
         except:
             pass
-        plt.colorbar(boundaries=np.arange(len(self.df['label_i_int'].unique())+1)-0.5).set_ticks(np.arange(len(self.df['label_i_int'].unique())))
+        if len(self.df['label_i_int'].unique())>1:
+            plt.colorbar(boundaries=np.arange(len(self.df['label_i_int'].unique())+1)-0.5).set_ticks(np.arange(len(self.df['label_i_int'].unique())))
         plt.tight_layout()
         plt.show()
     def get_umap_output(self):
@@ -2634,7 +2699,9 @@ class App:
         self.update_counts('na')
     def umap_update(self):
         self.MOSAIC.get_umap_output()
+        self.MOSAIC.load()
         self.update_counts('na')
+        self.load_df()
     def move_fix(self):
         self.MOSAIC.move_fix()
         self.update_counts('na')
