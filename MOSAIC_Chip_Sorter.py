@@ -106,6 +106,8 @@ UMAP Hotkeys
 
 '''
 import argparse
+from chunk import Chunk
+import multiprocessing
 import sys
 from sys import platform as _platform
 import pandas as pd
@@ -600,8 +602,10 @@ class MOSAIC:
         self.top=tk.Toplevel(root_tk)
         self.top.geometry( "{}x{}".format(int(root_tk.winfo_screenwidth()*0.95//1.5),int(root_tk.winfo_screenheight()*0.95//1.5)) )
         self.top.configure(background = 'black')
-        self.b=Button(self.top,text='Close',command=self.cleanup_show,bg=DEFAULT_SETTINGS.root_fg, fg=DEFAULT_SETTINGS.root_bg)
+        self.b=Button(self.top,text='Save',command=self.cleanup_show,bg=DEFAULT_SETTINGS.root_fg, fg=DEFAULT_SETTINGS.root_bg)
         self.b.pack()
+        self.c=Button(self.top,text='Close',command=self.cleanup,bg=DEFAULT_SETTINGS.root_fg, fg=DEFAULT_SETTINGS.root_bg)
+        self.c.pack()
         self.show_table()
     def cleanup_show(self):
         self.app.table.saveAs(self.df_filename_csv)
@@ -614,6 +618,8 @@ class MOSAIC:
         df_i.to_pickle(self.df_filename,protocol=2)
         df_i.to_csv(self.df_filename_csv,index=None)
         self.load()
+        self.top.destroy()
+    def cleanup(self):
         self.top.destroy()
     def show_table(self):
         self.app = TestApp(self.top, self.df_filename_csv)
@@ -859,8 +865,8 @@ class MOSAIC:
         self.df.to_csv(self.df_filename_csv,index=None)
     def create_df(self):
         self.Annotations_list=list(os.listdir(self.path_Annotations))
-        self.Annotations=[os.path.join(self.path_Annotations,Anno) for Anno in self.Annotations_list if Anno.find(self.XML_EXT)!=-1]
         self.JPEGs_list=list(os.listdir(self.path_JPEGImages))
+        self.Annotations=[os.path.join(self.path_Annotations,Anno) for Anno in self.Annotations_list if Anno.find(self.XML_EXT)!=-1 and Anno.replace(self.XML_EXT,self.JPG_EXT) in self.JPEGs_list]
         self.JPEGs=[os.path.join(self.path_JPEGImages,Anno.split(self.XML_EXT)[0]+self.JPG_EXT) for Anno in self.Annotations_list if Anno.split(self.XML_EXT)[0]+self.JPG_EXT in self.JPEGs_list]
         assert len(self.JPEGs)==len(self.Annotations) 
 
@@ -1926,6 +1932,71 @@ class MOSAIC:
             self.df.at[i,'umap_input']=self.chip_square_i
         self.df.to_pickle(self.df_filename)
         self.df.to_csv(self.df_filename_csv,index=None)
+    def get_umap_input_quick(self,i):
+        self.jpg_i=plt.imread(self.df['path_jpeg_i'].iloc[i])
+        self.xmin_i=self.df['xmin'].iloc[i]
+        self.xmax_i=self.df['xmax'].iloc[i]
+        self.ymin_i=self.df['ymin'].iloc[i]
+        self.ymax_i=self.df['ymax'].iloc[i]
+        self.longest=max(self.ymax_i-self.ymin_i,self.xmax_i-self.xmin_i)
+
+        def to_rgb2(im):
+            w,h=im.shape
+            ret=np.empty((w,h,3),dtype=np.uint8)
+            ret[:,:,:]=im[:,:,np.newaxis]
+            return ret
+        if len(self.jpg_i.shape)!=3:
+            self.jpg_i=to_rgb2(self.jpg_i)
+        if self.ymin_i==self.ymax_i:
+            self.ymax_i+=1
+        if self.xmin_i==self.xmax_i:
+            self.xmax_i+=1
+        self.chip_i=self.jpg_i[self.ymin_i:self.ymax_i,self.xmin_i:self.xmax_i,:]
+        try:
+            self.chip_square_i=Image.fromarray(self.chip_i) 
+        except:
+            print(self.df['path_jpeg_i'].iloc[i])
+            self.chip_square_i=Image.fromarray(self.chip_i)           
+        self.chip_square_i=self.chip_square_i.resize((self.W,self.H),Image.ANTIALIAS)
+        self.chip_square_i=np.array(self.chip_square_i)
+        #self.df.at[i,'umap_input']=''
+        return self.chip_square_i
+    def get_umap_input_quick_range(self,istart,iend,fl_pkl):
+        import pickle
+        f=open(fl_pkl,'wb')
+        flattened=[]
+        for i in range(istart,iend):
+            jpg_i=plt.imread(self.df['path_jpeg_i'].iloc[i])
+            xmin_i=self.df['xmin'].iloc[i]
+            xmax_i=self.df['xmax'].iloc[i]
+            ymin_i=self.df['ymin'].iloc[i]
+            ymax_i=self.df['ymax'].iloc[i]
+            longest=max(ymax_i-ymin_i,xmax_i-xmin_i)
+
+            def to_rgb2(im):
+                w,h=im.shape
+                ret=np.empty((w,h,3),dtype=np.uint8)
+                ret[:,:,:]=im[:,:,np.newaxis]
+                return ret
+            if len(jpg_i.shape)!=3:
+                jpg_i=to_rgb2(jpg_i)
+            if ymin_i==ymax_i:
+                ymax_i+=1
+            if xmin_i==xmax_i:
+                xmax_i+=1
+            chip_i=jpg_i[ymin_i:ymax_i,xmin_i:xmax_i,:]
+            try:
+                chip_square_i=Image.fromarray(chip_i) 
+            except:
+                print(self.df['path_jpeg_i'].iloc[i])
+                chip_square_i=Image.fromarray(chip_i)           
+            chip_square_i=chip_square_i.resize((self.W,self.H),Image.ANTIALIAS)
+            chip_square_i=np.array(chip_square_i)
+            #self.df.at[i,'umap_input']=''
+            flattened.append(np.array(chip_square_i).flatten())
+   
+        pickle.dump(flattened,f)
+        f.close()
     def breakup_df(self):
         print(len(self.df))
         self.SPLIT_NUM=1000
@@ -2018,15 +2089,114 @@ class MOSAIC:
         plt.show()
     def get_umap_output(self):
         self.df=self.df.dropna(axis=1)
+        import pickle
         if 'emb_X' not in self.df.columns:
             if 'umap_input' not in self.df.columns:
                 self.df['umap_input']=self.df['path_anno_i'].copy()
                 self.df['umap_input']=''  
-                self.get_umap_input()
-            self.reducer=umap.UMAP(random_state=42)
-            self.flattened=[np.array(w).flatten() for w in self.df.umap_input]
-            self.reducer.fit(self.flattened)
-            self.embedding=self.reducer.transform(self.flattened)
+                #self.get_umap_input()
+            #self.reducer=umap.UMAP(random_state=42)
+            #self.flattened=[np.array(w).flatten() for w in self.df.umap_input]
+            #self.flattened=[np.array(self.get_umap_input_quick(w)).flatten() for w in self.df.index]
+            print('CONVERTING CHIPS to flattened UMAP array')
+            self.flattened=[]
+            #count_w=0
+            #self.fl_pkl='flt_{}.pkl'.format(count_w)
+            self.fl_pkls=[]
+            #self.fl_pkls.append(self.fl_pkl)
+            #f=open(self.fl_pkl,'wb')
+            end_of_index=list(self.df.index)[-1]+1
+            from multiprocessing import Process
+            #import multiprocessing
+            #pool=multiprocessing.Pool(5)
+            processes=[]
+            CHUNK=200
+            if multiprocessing.cpu_count()>1:
+                NUM_PROCESS=multiprocessing.cpu_count()-1
+            else:
+                NUM_PROCESS=1
+
+            print('There are a total of {} items to go through at CHUNK={}'.format(end_of_index,CHUNK))
+            if os.path.exists('tmp')==False:
+                os.makedirs('tmp')
+            for j,i in tqdm(enumerate(range(0,end_of_index,CHUNK))):
+                fl_pkl='tmp/flt_{}_{}.pkl'.format(i,min(end_of_index,j*CHUNK+CHUNK))
+                self.fl_pkls.append(fl_pkl)
+                p=Process(target=self.get_umap_input_quick_range,args=(i,min(end_of_index,j*CHUNK+CHUNK),fl_pkl))
+                processes.append(p)
+                #processes.append([i,min(end_of_index,j*500+500),fl_pkl])
+                p.start()
+                if (j%NUM_PROCESS==0 and j!=0) or min(end_of_index,j*CHUNK+CHUNK)==end_of_index:
+                    print('\nStarting {} new proccess for {} of {}\n'.format(NUM_PROCESS,j,end_of_index//CHUNK))
+                    for process_i in tqdm(processes):
+                        process_i.join()
+                    processes=[]
+            #proccess=tuple(processes)
+            #pool.map(self.get_umap_input_quick_range,processes)
+            #pool.close()
+            #pool.join()
+            # for process_i in tqdm(processes):
+            #     process_i.join()
+            # for w in tqdm(self.df.index):
+            #     self.flattened.append(np.array(self.get_umap_input_quick(w)).astype(np.uint8).flatten())
+            #     if w%500==0 and w!=0:
+            #         pickle.dump(self.flattened,f)
+            #         self.flattened=[]
+            #         f.close()
+            #         count_w=w
+            #         if w!=end_of_index:
+            #             self.fl_pkl='flt_{}.pkl'.format(count_w)
+            #             self.fl_pkls.append(self.fl_pkl)
+            #             f=open(self.fl_pkl,'wb')
+            # try:
+            #     pickle.dump(self.flattened,f)
+            #     f.close()
+            # except:
+            #     pass
+            #self.reducer=umap.UMAP(random_state=42)
+            MAX_FLAT_LEN=10000
+            RESET=True
+            self.reducer=umap.UMAP(random_state=42,low_memory=True)
+            for i,file_i in tqdm(enumerate(self.fl_pkls)):
+
+                try:
+                    f=open(file_i,'rb')
+                    if RESET:
+                        #self.reducer=umap.UMAP(random_state=42)
+                        self.flattened=np.array(pickle.load(f))
+                        RESET=False
+                    else:                      
+                        self.flattened=np.concatenate((self.flattened,np.array(pickle.load(f))),axis=0)
+                    if self.flattened.shape[0]%MAX_FLAT_LEN==0 or i==len(self.fl_pkls)-1:
+                        print('FITTING to the flattened UMAP array')
+                        self.reducer.fit(self.flattened.astype(np.uint8))
+                        print('TRANSFORMING to the flattened UMAP array')
+                        try:
+                            self.embedding=np.concatenate((self.embedding,np.array(self.reducer.transform(self.flattened.astype(np.uint8)))),axis=0)
+                        except:
+                            self.embedding=np.array(self.reducer.transform(self.flattened.astype(np.uint8)))
+                        RESET=True
+                    f.close()
+                except:
+                    pass
+                os.remove(file_i)
+
+            #self.embedding=np.array(self.embedding)
+            #self.embedding=np.expand_dims(self.embedding,axis=-1)
+            # print('FITTING to the flattened UMAP array')
+            # self.reducer.fit(self.flattened.astype(np.uint8))
+            # print('TRANSFORMING to the flattened UMAP array')
+            # self.embedding=self.reducer.transform(self.flattened.astype(np.uint8))
+            print('self.embedding.shape',self.embedding.shape)
+
+
+            self.df.to_pickle(self.df_filename)
+            self.df.to_csv(self.df_filename_csv,index=None)
+            # self.reducer=umap.UMAP(random_state=42)
+            # print('FITTING to the flattened UMAP array')
+            # self.reducer.fit(self.flattened)
+            # print('TRANSFORMING to the flattened UMAP array')
+            # self.embedding=self.reducer.transform(self.flattened)
             self.df['emb_X']=self.df['label_i'].copy()
             self.df['emb_Y']=self.df['label_i'].copy()
             self.df['emb_X']=[w for w in self.embedding[:,0]]
@@ -2042,18 +2212,41 @@ class MOSAIC:
             self.df['label_i_int']=self.df['label_i'].copy()
             self.df['label_i_int']=[self.label_dic[w] for w in self.df['label_i']]
             self.df['label_dist']=self.df['emb_X'].copy()
-            for row in tqdm(range(len(self.df))):
-                label_i=self.df.iloc[row].label_i
-                avg_X_i=self.df[self.df.label_i==label_i]['emb_X'].mean()
-                avg_Y_i=self.df[self.df.label_i==label_i]['emb_Y'].mean()
-                X_i=self.df.iloc[row].emb_X
-                Y_i=self.df.iloc[row].emb_Y
-                d_X_i=X_i-avg_X_i
-                d_Y_i=Y_i-avg_Y_i
-                dist_i=np.sqrt(d_X_i**2+d_Y_i**2)
-                self.df.at[row,'label_dist']=dist_i
+            unique_labels=list(self.df.label_i.unique())
+            unique_labels_dic={}
+            unique_dfs={}
+            print('Operating on all unique labels for embeddings')
+            for unique_label in tqdm(unique_labels):
+                print('unique_label',unique_label)
+                df_i=self.df[self.df.label_i==unique_label].copy()
+                df_i=df_i.reset_index().drop('index',axis=1)
+                df_i['avg_X_i']=df_i['emb_X'].mean()
+                df_i['avg_Y_i']=df_i['emb_Y'].mean()
+                df_i['label_dist']=df_i[['emb_X','avg_X_i','emb_Y','avg_Y_i']].apply(lambda x: np.sqrt((x[0]-x[1])**2+(x[2]-x[3])**2),axis=1)
+                unique_dfs[unique_label]=df_i
+                #print(unique_dfs[unique_label].head())
+            print('Appending each unique label pandas dataframe')
+            for i,unique_df in tqdm(enumerate(unique_dfs.values())):
+                if i==0:
+                    self.df=unique_df
+                else:
+                    self.df=self.df.append(unique_df,ignore_index=True)
+            self.df=self.df.reset_index().drop('index',axis=1)
+            del unique_dfs
+            del unique_labels_dic
+            del unique_labels
+            # for row in tqdm(range(len(self.df))):
+            #     label_i=self.df.iloc[row].label_i
+            #     avg_X_i=self.df[self.df.label_i==label_i]['emb_X'].mean()
+            #     avg_Y_i=self.df[self.df.label_i==label_i]['emb_Y'].mean()
+            #     X_i=self.df.iloc[row].emb_X
+            #     Y_i=self.df.iloc[row].emb_Y
+            #     d_X_i=X_i-avg_X_i
+            #     d_Y_i=Y_i-avg_Y_i
+            #     dist_i=np.sqrt(d_X_i**2+d_Y_i**2)
+            #     self.df.at[row,'label_dist']=dist_i
         self.draw_umap()
-        
+
 
 
 class App:
