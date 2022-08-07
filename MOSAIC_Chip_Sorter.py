@@ -662,6 +662,9 @@ class MOSAIC:
         self.df.to_pickle(self.df_filename)
         self.df.to_csv(self.df_filename_csv,index=None)
 
+    def show_draw(self):
+        #TBD
+        pass
 
 
     def draw(self):
@@ -939,6 +942,25 @@ class MOSAIC:
             self.close_window=True
         self.df.to_pickle(self.df_filename)
         self.df.to_csv(self.df_filename_csv,index=None)
+    def on_key_object(self,event):
+        print('you pressed', event.key, event.xdata, event.ydata)
+        if event.key=='n':
+            plt.close('all')
+            cv2.destroyAllWindows() #edit sjs 6/3/2022
+            self.go_to_next=True
+        if event.key=='q' or event.key=='escape':
+            plt.close('all') 
+            cv2.destroyAllWindows() #edit sjs 6/3/2022
+            self.close_window=True
+        if event.key=='f':
+            for index_i in self.index_i_fix:
+                self.df.at[index_i,'checked']="bad"
+        if event.key=='u':
+            for index_i in self.index_i_fix:
+                self.df.at[index_i,'checked']="good"  
+        if event.key=='f' or event.key=='u':              
+            self.df.to_pickle(self.df_filename)
+            self.df.to_csv(self.df_filename_csv,index=None)
     def onclick(self,event):
         #global df_i,axes_list,df,title_list,img_list
         print('%s click: button=%d, x=%d, y=%d, xdata=%f, ydata=%f' %
@@ -989,6 +1011,7 @@ class MOSAIC:
                 break
         self.df.to_pickle(self.df_filename)
         self.df.to_csv(self.df_filename_csv,index=None)
+
     def onclick_select_mosaic(self,event):
         #global df_i,axes_list,df,title_list,img_list
         print('%s click: button=%d, x=%d, y=%d, xdata=%f, ydata=%f' %
@@ -1792,6 +1815,71 @@ class MOSAIC:
             plt.show()
             self.k+=1
             #self.df.to_pickle(self.df_filename) #TBD
+    def look_at_objects(self):
+        
+        self.go_to_next=True
+        self.close_window=False
+        if 'umap_input' in self.df.columns:
+            self.df_i=self.df.drop('umap_input',axis=1)
+        else:
+            self.df_i=self.df
+
+        print(len(self.df_i))
+        
+        for k,jpg_i in tqdm(enumerate(self.df_i['path_jpeg_i'].unique())):
+            self.df_j=self.df_i[self.df_i['path_jpeg_i']==jpg_i].copy()
+
+            if self.close_window==True:
+                break
+            self.go_to_next=False
+            self.axes_list=[]
+            self.title_list=[]
+            self.img_list=[]
+            self.dic={}
+            self.index_i_fix=[]
+
+            self.fig_i=plt.figure(figsize=(self.FIGSIZE_W,self.FIGSIZE_H),num='Showing {}.  Press "f" fix, "u" unfix, "q" quit, "n" for next.'.format(os.path.basename(jpg_i)))
+            self.fig_i.set_size_inches((self.FIGSIZE_INCH_W, self.FIGSIZE_INCH_W))
+            self.cidk = self.fig_i.canvas.mpl_connect('key_press_event', self.on_key_object)
+            self.image=Image.open(jpg_i)
+            
+            for index_i in list(self.df_j[self.df_j['path_jpeg_i']==jpg_i].index):
+                xmin=self.df_j['xmin'].loc[index_i]
+                xmax=self.df_j['xmax'].loc[index_i]
+                ymin=self.df_j['ymin'].loc[index_i]
+                ymax=self.df_j['ymax'].loc[index_i]
+                label_i=self.df_j['label_i'].loc[index_i]
+                draw=ImageDraw.Draw(self.image)
+                draw.rectangle([(xmin, ymin),
+                            (xmax, ymax)],
+                        outline=self.COLOR, width=3)
+                font = ImageFont.load_default()
+                draw.text((xmin + 4, ymin + 4),
+                    '%s\n' % (label_i),
+                    fill=self.COLOR, font=font)
+                self.img_i=cv2.cvtColor(np.array(self.image),cv2.COLOR_BGR2RGB)
+                self.img_i_H=self.img_i.shape[1]
+                self.img_i_W=self.img_i.shape[0]
+                self.img_i_W_ratio=self.ROOT_W/self.img_i_W
+                self.img_i_H_ratio=self.ROOT_H/self.img_i_H
+                self.img_i_new_W=int(0.95*self.img_i_W_ratio*self.img_i_W)
+                self.img_i_new_H=int(0.95*self.img_i_H_ratio*self.img_i_H)
+                self.img_i=cv2.resize(self.img_i,(self.img_i_new_W,self.img_i_new_H))
+                self.index_i_fix.append(index_i)
+            #self.title_list.append(plt.title(os.path.basename(jpg_i),fontsize='5',color='blue'))
+           
+            plt.imshow(cv2.cvtColor(self.img_i, cv2.COLOR_BGR2RGB))
+            plt.axis('off')
+            figManager = plt.get_current_fig_manager()
+            figManager.window.showMaximized()
+            plt.show()
+            #cv2.imshow('Selected Image.  Press "q" to close window',self.img_i)
+            #cv2.waitKey(0)
+            #cv2.destroyAllWindows()
+            #plt.show()
+
+            #self.df.to_pickle(self.df_filename)
+            #self.df.to_csv(self.df_filename_csv,index=None)
 
     def look_at_target(self,target_i):
         self.target_i=target_i
@@ -2875,7 +2963,12 @@ class App:
         self.remove_blanks_button=Button(self.root,image=self.icon_clear_fix,command=self.remove_blanks,bg=self.root_bg,fg=self.root_fg)
         self.remove_blanks_button.grid(row=13,column=31,sticky='se')
         self.remove_blanks_note=tk.Label(self.root,text='17. \n Remove Blanks',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
-        self.remove_blanks_note.grid(row=14,column=31,sticky='ne')          
+        self.remove_blanks_note.grid(row=14,column=31,sticky='ne')    
+
+        self.look_at_objects_button=Button(self.root,image=self.icon_analyze,command=self.look_at_objects,bg=self.root_bg,fg=self.root_fg)
+        self.look_at_objects_button.grid(row=15,column=31,sticky='se')
+        self.look_at_objects_note=tk.Label(self.root,text='18. \n Look at Objects',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.look_at_objects_note.grid(row=16,column=31,sticky='ne')        
 
     def get_DXDY(self):
         self.DX_MAX=int(self.DX_MAX_VAR.get())
@@ -2933,6 +3026,10 @@ class App:
         self.update_counts('na')
     def remove_blanks(self):
         self.MOSAIC.remove_blanks()
+        self.load_df()
+        self.update_counts('na')
+    def look_at_objects(self):
+        self.MOSAIC.look_at_objects()
         self.load_df()
         self.update_counts('na')
     def get_update_background_img(self):
