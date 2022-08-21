@@ -654,7 +654,8 @@ class MOSAIC:
         plt.scatter(self.df.DX,self.df.DY,c=self.df['label_i_int'],cmap='Spectral',s=5)
         self.gca=plt.gca()
         self.gca.set_aspect('equal','datalim')
-        plt.colorbar(boundaries=np.arange(len(self.df['label_i_int'].unique())+1)-0.5).set_ticks(np.arange(len(self.df['label_i_int'].unique())))
+        if len(self.df['label_i_int'].unique())>1:
+            plt.colorbar(boundaries=np.arange(len(self.df['label_i_int'].unique())+1)-0.5).set_ticks(np.arange(len(self.df['label_i_int'].unique())))
         plt.tight_layout()
         plt.show()
     def filter_dxdy(self,DX_MIN,DX_MAX,DY_MIN,DY_MAX):
@@ -688,7 +689,20 @@ class MOSAIC:
         while len(str_i)<min_len:
             str_i='0'+str_i
         return str_i
-    
+    def bb_intersection(self,boxA,boxB):
+        xA=max(boxA[0],boxB[0])
+        yA=max(boxA[1],boxB[1])
+        xB=min(boxA[2],boxB[2])
+        yB=min(boxA[3],boxB[3])
+        interArea=max(0,xB-xA+1)*max(0,yB-yA+1)
+        boxAArea=(boxA[2]-boxA[0]+1)*(boxA[3]-boxA[1]+1)
+        boxBArea=(boxB[2]-boxB[0]+1)*(boxB[3]-boxB[1]+1)
+        denominator=float(boxAArea+boxBArea-interArea)
+        if denominator>0:
+            iou=interArea/float(boxAArea+boxBArea-interArea)
+        else:
+            iou=1
+        return iou
     def chips(self):
         self.unique_labels={w:i for i,w in enumerate(self.df['label_i'].unique())}
         self.basePath_chips=os.path.join(self.basePath,'chips')
@@ -699,27 +713,77 @@ class MOSAIC:
         for label_i in tqdm(self.unique_labels):
             self.df_chips=self.df[self.df['label_i']==label_i].reset_index().drop('index',axis=1).copy()
             self.path_chips_label_i=os.path.join(self.basePath_chips,label_i)
+            self.path_chips_label_i_BLANK=os.path.join(self.basePath_chips,label_i+'_BLANK')
             if os.path.exists(self.path_chips_label_i):
                 pass
             else:
                 os.makedirs(self.path_chips_label_i)
+            if os.path.exists(self.path_chips_label_i_BLANK):
+                pass
+            else:
+                os.makedirs(self.path_chips_label_i_BLANK)
             for anno,jpg in tqdm(zip(self.df_chips.path_anno_i,self.df_chips.path_jpeg_i)):
                 anno_i=os.path.basename(anno) #.split('/')[-1]
                 jpg_i=os.path.basename(jpg) #.split('/')[-1]
                 path_chip_anno=os.path.join(self.path_Annotations,anno_i)
                 path_chip_jpeg=os.path.join(self.path_JPEGImages,jpg_i)
                 self.df_chips_i=self.df_chips[self.df_chips['path_anno_i']==anno].reset_index().drop('index',axis=1)
+                image=cv2.imread(path_chip_jpeg)
                 for j,row in enumerate(range(len(self.df_chips_i))):
-                    image=cv2.imread(path_chip_jpeg)
                     xmin=self.df_chips_i['xmin'].iloc[row]
                     xmax=self.df_chips_i['xmax'].iloc[row]
                     ymin=self.df_chips_i['ymin'].iloc[row]
                     ymax=self.df_chips_i['ymax'].iloc[row]
                     label_i=self.df_chips_i['label_i'].iloc[row]
+                    label_i_BLANK=label_i+'_BLANK'
                     chipA=image[ymin:ymax,xmin:xmax]
                     chip_name_i=label_i+"_"+jpg_i.split('.')[0]+'_chip{}of{}_'.format(self.pad(str(j)),self.pad(str(len(self.df_chips_i))))+'_ymin{}'.format(ymin)+'_ymax{}'.format(ymax)+'_xmin{}'.format(xmin)+'_xmax{}.jpg'.format(xmax)
                     chip_name_i=os.path.join(self.path_chips_label_i,chip_name_i)
                     cv2.imwrite(chip_name_i,chipA)
+                    #CREATE BLANK CHIP
+                    dx=xmax-xmin
+                    factor=1.5
+                    if xmin>0.5*image.shape[1]:
+                        xminB=xmin-dx*factor
+                        xmaxB=xmax-dx*factor
+                    else:
+                        xminB=xmin+dx*factor
+                        xmaxB=xmax+dx*factor
+                    xminB=int(max(0,xminB))
+                    xmaxB=int(min(image.shape[1],xmaxB))
+                    dy=ymax-ymin
+                    if ymin>0.5*image.shape[0]:
+                        yminB=ymin-dy*factor
+                        ymaxB=ymax-dy*factor
+                    else:
+                        yminB=ymin+dy*factor
+                        ymaxB=ymax+dy*factor
+                    yminB=int(max(0,yminB))
+                    ymaxB=int(min(image.shape[0],ymaxB))
+                    chipBLANK=image[yminB:ymaxB,xminB:xmaxB]
+                    boxBlank=(xminB,yminB,xmaxB,ymaxB)                   
+                    iou=0
+                    for p,rowp in enumerate(range(len(self.df_chips_i))):
+                        xminp=self.df_chips_i['xmin'].iloc[rowp]
+                        xmaxp=self.df_chips_i['xmax'].iloc[rowp]
+                        yminp=self.df_chips_i['ymin'].iloc[rowp]
+                        ymaxp=self.df_chips_i['ymax'].iloc[rowp]
+                        boxFull=(xminp,yminp,xmaxp,ymaxp)
+                        ioup=self.bb_intersection(boxBlank,boxFull)
+                        if ioup>iou:
+                            iou=ioup
+                    if iou<0.2:
+                        chip_name_i=label_i_BLANK+"_"+jpg_i.split('.')[0]+'_chip{}of{}_'.format(self.pad(str(j)),self.pad(str(len(self.df_chips_i))))+'_ymin{}'.format(ymin)+'_ymax{}'.format(ymax)+'_xmin{}'.format(xmin)+'_xmax{}.jpg'.format(xmax)
+                        chip_name_i=os.path.join(self.path_chips_label_i_BLANK,chip_name_i)
+                        #print('yminB:ymaxB,xminB:xmaxB')
+                        #print('{}:{},{}:{}'.format(yminB,ymaxB,xminB,xmaxB))
+                        #print('image.shape')
+                        #print(image.shape)
+                        try:
+                            cv2.imwrite(chip_name_i,chipBLANK)
+                        except:
+                            print('BAD ASSERTION,skipping this chip')
+
     def popup(self):
         root_tk.title('')
         self.w=popupWindow(root_tk)
