@@ -739,50 +739,53 @@ class MOSAIC:
                     chipA=image[ymin:ymax,xmin:xmax]
                     chip_name_i=label_i+"_"+jpg_i.split('.')[0]+'_chip{}of{}_'.format(self.pad(str(j)),self.pad(str(len(self.df_chips_i))))+'_ymin{}'.format(ymin)+'_ymax{}'.format(ymax)+'_xmin{}'.format(xmin)+'_xmax{}.jpg'.format(xmax)
                     chip_name_i=os.path.join(self.path_chips_label_i,chip_name_i)
-                    cv2.imwrite(chip_name_i,chipA)
-                    #CREATE BLANK CHIP
-                    dx=xmax-xmin
-                    factor=1.5
-                    if xmin>0.5*image.shape[1]:
-                        xminB=xmin-dx*factor
-                        xmaxB=xmax-dx*factor
-                    else:
-                        xminB=xmin+dx*factor
-                        xmaxB=xmax+dx*factor
-                    xminB=int(max(0,xminB))
-                    xmaxB=int(min(image.shape[1],xmaxB))
-                    dy=ymax-ymin
-                    if ymin>0.5*image.shape[0]:
-                        yminB=ymin-dy*factor
-                        ymaxB=ymax-dy*factor
-                    else:
-                        yminB=ymin+dy*factor
-                        ymaxB=ymax+dy*factor
-                    yminB=int(max(0,yminB))
-                    ymaxB=int(min(image.shape[0],ymaxB))
-                    chipBLANK=image[yminB:ymaxB,xminB:xmaxB]
-                    boxBlank=(xminB,yminB,xmaxB,ymaxB)                   
-                    iou=0
-                    for p,rowp in enumerate(range(len(self.df_chips_i))):
-                        xminp=self.df_chips_i['xmin'].iloc[rowp]
-                        xmaxp=self.df_chips_i['xmax'].iloc[rowp]
-                        yminp=self.df_chips_i['ymin'].iloc[rowp]
-                        ymaxp=self.df_chips_i['ymax'].iloc[rowp]
-                        boxFull=(xminp,yminp,xmaxp,ymaxp)
-                        ioup=self.bb_intersection(boxBlank,boxFull)
-                        if ioup>iou:
-                            iou=ioup
-                    if iou<0.2:
-                        chip_name_i=label_i_BLANK+"_"+jpg_i.split('.')[0]+'_chip{}of{}_'.format(self.pad(str(j)),self.pad(str(len(self.df_chips_i))))+'_ymin{}'.format(ymin)+'_ymax{}'.format(ymax)+'_xmin{}'.format(xmin)+'_xmax{}.jpg'.format(xmax)
-                        chip_name_i=os.path.join(self.path_chips_label_i_BLANK,chip_name_i)
-                        #print('yminB:ymaxB,xminB:xmaxB')
-                        #print('{}:{},{}:{}'.format(yminB,ymaxB,xminB,xmaxB))
-                        #print('image.shape')
-                        #print(image.shape)
-                        try:
-                            cv2.imwrite(chip_name_i,chipBLANK)
-                        except:
-                            print('BAD ASSERTION,skipping this chip')
+                    try:
+                        cv2.imwrite(chip_name_i,chipA)
+                        #CREATE BLANK CHIP
+                        dx=xmax-xmin
+                        factor=1.5
+                        if xmin>0.5*image.shape[1]:
+                            xminB=xmin-dx*factor
+                            xmaxB=xmax-dx*factor
+                        else:
+                            xminB=xmin+dx*factor
+                            xmaxB=xmax+dx*factor
+                        xminB=int(max(0,xminB))
+                        xmaxB=int(min(image.shape[1],xmaxB))
+                        dy=ymax-ymin
+                        if ymin>0.5*image.shape[0]:
+                            yminB=ymin-dy*factor
+                            ymaxB=ymax-dy*factor
+                        else:
+                            yminB=ymin+dy*factor
+                            ymaxB=ymax+dy*factor
+                        yminB=int(max(0,yminB))
+                        ymaxB=int(min(image.shape[0],ymaxB))
+                        chipBLANK=image[yminB:ymaxB,xminB:xmaxB]
+                        boxBlank=(xminB,yminB,xmaxB,ymaxB)                   
+                        iou=0
+                        for p,rowp in enumerate(range(len(self.df_chips_i))):
+                            xminp=self.df_chips_i['xmin'].iloc[rowp]
+                            xmaxp=self.df_chips_i['xmax'].iloc[rowp]
+                            yminp=self.df_chips_i['ymin'].iloc[rowp]
+                            ymaxp=self.df_chips_i['ymax'].iloc[rowp]
+                            boxFull=(xminp,yminp,xmaxp,ymaxp)
+                            ioup=self.bb_intersection(boxBlank,boxFull)
+                            if ioup>iou:
+                                iou=ioup
+                        if iou<0.2:
+                            chip_name_i=label_i_BLANK+"_"+jpg_i.split('.')[0]+'_chip{}of{}_'.format(self.pad(str(j)),self.pad(str(len(self.df_chips_i))))+'_ymin{}'.format(ymin)+'_ymax{}'.format(ymax)+'_xmin{}'.format(xmin)+'_xmax{}.jpg'.format(xmax)
+                            chip_name_i=os.path.join(self.path_chips_label_i_BLANK,chip_name_i)
+                            #print('yminB:ymaxB,xminB:xmaxB')
+                            #print('{}:{},{}:{}'.format(yminB,ymaxB,xminB,xmaxB))
+                            #print('image.shape')
+                            #print(image.shape)
+                            try:
+                                cv2.imwrite(chip_name_i,chipBLANK)
+                            except:
+                                print('BAD ASSERTION,skipping this chip')
+                    except:
+                        print('BAD ASSERTION,skipping this chip')
 
     def popup(self):
         root_tk.title('')
@@ -930,6 +933,38 @@ class MOSAIC:
                 i+=1
         self.df.to_pickle(self.df_filename)
         self.df.to_csv(self.df_filename_csv,index=None)
+    def speed_df(self,path_anno_i,path_jpeg_i,df_queue_i):
+        df=df_queue_i.get()
+        i=0
+        parser = etree.XMLParser(encoding=self.ENCODE_METHOD)
+        try:
+            xmltree = ElementTree.parse(path_anno_i, parser=parser).getroot()
+        except:
+            print(path_anno_i)
+            xmltree = ElementTree.parse(path_anno_i, parser=parser).getroot()
+        filename = xmltree.find('filename').text
+        width_i=xmltree.find('size').find('width').text
+        height_i=xmltree.find('size').find('height').text
+
+        for object_iter in xmltree.findall('object'):
+            bndbox = object_iter.find("bndbox")
+            label = object_iter.find('name').text
+            xmin = bndbox.find('xmin').text
+            ymin = bndbox.find('ymin').text
+            xmax = bndbox.find('xmax').text
+            ymax = bndbox.find('ymax').text
+            df.at[i,'xmin']=xmin
+            df.at[i,'xmax']=xmax
+            df.at[i,'ymin']=ymin
+            df.at[i,'ymax']=ymax
+            df.at[i,'width']=width_i
+            df.at[i,'height']=height_i
+            df.at[i,'label_i']=label
+            df.at[i,'path_jpeg_i']=path_jpeg_i
+            df.at[i,'path_anno_i']=path_anno_i
+            i+=1    
+        df_queue_i.put(df)    
+
     def create_df(self):
         self.Annotations_list=list(os.listdir(self.path_Annotations))
         self.JPEGs_list=list(os.listdir(self.path_JPEGImages))
@@ -938,37 +973,86 @@ class MOSAIC:
         assert len(self.JPEGs)==len(self.Annotations) 
 
         self.df=pd.DataFrame(columns=['xmin','xmax','ymin','ymax','width','height','label_i','path_jpeg_i','path_anno_i'],dtype='object')
-        i=0
-        for path_anno_i,path_jpeg_i in tqdm(zip(self.Annotations,self.JPEGs)):
-            parser = etree.XMLParser(encoding=self.ENCODE_METHOD)
-            try:
-                xmltree = ElementTree.parse(path_anno_i, parser=parser).getroot()
-            except:
-                print(path_anno_i)
-                xmltree = ElementTree.parse(path_anno_i, parser=parser).getroot()
-            filename = xmltree.find('filename').text
-            width_i=xmltree.find('size').find('width').text
-            height_i=xmltree.find('size').find('height').text
+        from multiprocessing import Process,Queue
 
-            for object_iter in xmltree.findall('object'):
-                bndbox = object_iter.find("bndbox")
-                label = object_iter.find('name').text
-                xmin = bndbox.find('xmin').text
-                ymin = bndbox.find('ymin').text
-                xmax = bndbox.find('xmax').text
-                ymax = bndbox.find('ymax').text
-                self.df.at[i,'xmin']=xmin
-                self.df.at[i,'xmax']=xmax
-                self.df.at[i,'ymin']=ymin
-                self.df.at[i,'ymax']=ymax
-                self.df.at[i,'width']=width_i
-                self.df.at[i,'height']=height_i
-                self.df.at[i,'label_i']=label
-                self.df.at[i,'path_jpeg_i']=path_jpeg_i
-                self.df.at[i,'path_anno_i']=path_anno_i
-                i+=1
+        if multiprocessing.cpu_count()>1:
+            NUM_PROCESS=multiprocessing.cpu_count()-1
+        else:
+            NUM_PROCESS=1
+        i=0
+        processes=[]
+        df_queues={}
+        for j,(path_anno_i,path_jpeg_i) in tqdm(enumerate(zip(self.Annotations,self.JPEGs))):
+            df_queues[len(processes)]=Queue()
+            df_queues[len(processes)].put(self.df.copy())
+            p=Process(target=self.speed_df,args=(path_anno_i,path_jpeg_i,df_queues[len(processes)]))
+            processes.append(p)
+            p.start()
+            if (j%NUM_PROCESS==0 and j!=0):
+                print('\Finished Reading {} Annotations of {} \n'.format(j,len(self.Annotations)))
+                for process_i in processes:
+                    process_i.join()
+                for queue_i in df_queues.values():
+                    if i==0:
+                        self.df_tmp=queue_i.get()
+                        i+=1
+                    else:
+                        self.df_tmp=pd.concat([self.df_tmp,queue_i.get()],ignore_index=True)
+                df_queues={}
+                processes=[]
+        try:
+            for process_i in processes:
+                process_i.join()
+            for queue_i in df_queues.values():
+                if i==0:
+                    self.df_tmp=queue_i.get()
+                    i+=1
+                else:
+                    self.df_tmp=pd.concat([self.df_tmp,queue_i.get()],ignore_index=True)
+        except:
+            pass
+        self.df=self.df_tmp.copy()
         self.df.to_pickle(self.df_filename)
         self.df.to_csv(self.df_filename_csv,index=None)
+    # def create_df(self):
+    #     self.Annotations_list=list(os.listdir(self.path_Annotations))
+    #     self.JPEGs_list=list(os.listdir(self.path_JPEGImages))
+    #     self.Annotations=[os.path.join(self.path_Annotations,Anno) for Anno in self.Annotations_list if Anno.find(self.XML_EXT)!=-1 and Anno.replace(self.XML_EXT,self.JPG_EXT) in self.JPEGs_list]
+    #     self.JPEGs=[os.path.join(self.path_JPEGImages,Anno.split(self.XML_EXT)[0]+self.JPG_EXT) for Anno in self.Annotations_list if Anno.split(self.XML_EXT)[0]+self.JPG_EXT in self.JPEGs_list]
+    #     assert len(self.JPEGs)==len(self.Annotations) 
+
+    #     self.df=pd.DataFrame(columns=['xmin','xmax','ymin','ymax','width','height','label_i','path_jpeg_i','path_anno_i'],dtype='object')
+    #     i=0
+    #     for path_anno_i,path_jpeg_i in tqdm(zip(self.Annotations,self.JPEGs)):
+    #         parser = etree.XMLParser(encoding=self.ENCODE_METHOD)
+    #         try:
+    #             xmltree = ElementTree.parse(path_anno_i, parser=parser).getroot()
+    #         except:
+    #             print(path_anno_i)
+    #             xmltree = ElementTree.parse(path_anno_i, parser=parser).getroot()
+    #         filename = xmltree.find('filename').text
+    #         width_i=xmltree.find('size').find('width').text
+    #         height_i=xmltree.find('size').find('height').text
+
+    #         for object_iter in xmltree.findall('object'):
+    #             bndbox = object_iter.find("bndbox")
+    #             label = object_iter.find('name').text
+    #             xmin = bndbox.find('xmin').text
+    #             ymin = bndbox.find('ymin').text
+    #             xmax = bndbox.find('xmax').text
+    #             ymax = bndbox.find('ymax').text
+    #             self.df.at[i,'xmin']=xmin
+    #             self.df.at[i,'xmax']=xmax
+    #             self.df.at[i,'ymin']=ymin
+    #             self.df.at[i,'ymax']=ymax
+    #             self.df.at[i,'width']=width_i
+    #             self.df.at[i,'height']=height_i
+    #             self.df.at[i,'label_i']=label
+    #             self.df.at[i,'path_jpeg_i']=path_jpeg_i
+    #             self.df.at[i,'path_anno_i']=path_anno_i
+    #             i+=1
+    #     self.df.to_pickle(self.df_filename)
+    #     self.df.to_csv(self.df_filename_csv,index=None)
     def update_checked(self):
         not_checked=str(len(self.df[(self.df['checked']=="")&(self.df['label_i']==self.target_i)]))
         #print('not checked_total = ',not_checked_total)
@@ -2123,6 +2207,7 @@ class MOSAIC:
             xmax_i=self.df['xmax'].iloc[i]
             ymin_i=self.df['ymin'].iloc[i]
             ymax_i=self.df['ymax'].iloc[i]
+
             longest=max(ymax_i-ymin_i,xmax_i-xmin_i)
 
             def to_rgb2(im):
@@ -2141,7 +2226,22 @@ class MOSAIC:
                 chip_square_i=Image.fromarray(chip_i) 
             except:
                 print(self.df['path_jpeg_i'].iloc[i])
-                chip_square_i=Image.fromarray(chip_i)           
+ 
+                print('jpg_i.shape',jpg_i.shape)
+                print('chip_i.shape',chip_i.shape)
+                print('xmin_i',xmin_i)
+                print('xmax_i',xmax_i)
+                print('ymin_i',ymin_i)
+                print('ymax_i',ymax_i)
+                chip_i=chip_i*255
+                chip_i=chip_i.astype(np.uint8)
+                chip_square_i=Image.fromarray(chip_i)
+                #plt.imshow(chip_i)
+                #plt.show()
+
+                #chip_square_i=Image.fromarray(chip_i[:,:,0])
+
+                            
             chip_square_i=chip_square_i.resize((self.W,self.H),Image.ANTIALIAS)
             chip_square_i=np.array(chip_square_i)
             #self.df.at[i,'umap_input']=''
