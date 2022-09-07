@@ -347,6 +347,206 @@ class popupWindow_REMOVEBLANKS(object):
         self.value="No"
         self.top.destroy()
 
+class popupWindow_CHIPS(object):
+    def __init__(self,master,unique_labels):
+        self.top=tk.Toplevel(master)
+        self.top.geometry( "{}x{}".format(ROOT_W//2,ROOT_H//2) )
+        self.top.configure(background = 'black')
+        self.l=Button(self.top,text="Submit",command=self.cleanup_yes,bg=DEFAULT_SETTINGS.root_fg, fg=DEFAULT_SETTINGS.root_bg)
+        self.l.grid(row=1,column=1,sticky='se')
+        self.e=Button(self.top,text="Cancel",command=self.cleanup_no,bg=DEFAULT_SETTINGS.root_fg, fg=DEFAULT_SETTINGS.root_bg)
+        self.e.grid(row=1,column=2,sticky='sw')
+        self.style4=ttk.Style()
+        self.style4.configure('Normal.TCheckbutton',
+                             background='green',
+                             foreground='black')
+        self.checkm_vars={}
+        self.checkm_buttons={}
+        for i,label in enumerate(unique_labels):
+            self.checkm_vars[label]=tk.IntVar()
+            self.checkm_vars[label].set(1)
+            self.checkm_buttons[label]=ttk.Checkbutton(self.top, style='Normal.TCheckbutton',text=label,variable=self.checkm_vars[label],onvalue=1, offvalue=0)
+            self.checkm_buttons[label].grid(row=i+1,column=3,sticky='sw')     
+
+    def cleanup_yes(self):
+        CHIP_LIST=[]
+        for label_i,value_i in self.checkm_vars.items():
+            if value_i.get()==1:
+                CHIP_LIST.append(label_i)
+        self.value=CHIP_LIST
+        self.top.destroy()
+    def cleanup_no(self):
+        CHIP_LIST=[]
+        self.value=CHIP_LIST
+        self.top.destroy()
+
+class popupWindow_CHIPS_CLEAR(object):
+    def __init__(self,master,path_chips):
+        self.top=tk.Toplevel(master)
+        self.top.geometry( "{}x{}".format(ROOT_W//2,ROOT_H//2) )
+        self.top.configure(background = 'black')
+        self.l=Button(self.top,text="CLEAR EXISTING CHIPS?",command=self.cleanup_yes,bg=DEFAULT_SETTINGS.root_fg, fg=DEFAULT_SETTINGS.root_bg)
+        self.l.grid(row=1,column=1,sticky='se')
+        self.e=Button(self.top,text="KEEP EXISTING CHIPS?",command=self.cleanup_no,bg=DEFAULT_SETTINGS.root_fg, fg=DEFAULT_SETTINGS.root_bg)
+        self.e.grid(row=1,column=2,sticky='sw')  
+        os.system(f'xdg-open {path_chips}')  
+    def cleanup_yes(self):
+        self.value=True
+        self.top.destroy()
+    def cleanup_no(self):
+        self.value=False
+        self.top.destroy()
+
+class popupWindow_KEEPCLASS(object):
+    def __init__(self,master,new_df):
+        self.top=tk.Toplevel(master)
+        self.top.geometry( "{}x{}".format(ROOT_W//2,ROOT_H//2) )
+        self.top.configure(background = 'black')
+        self.l=Button(self.top,text="Submit",command=self.cleanup_yes,bg=DEFAULT_SETTINGS.root_fg, fg=DEFAULT_SETTINGS.root_bg)
+        self.l.grid(row=1,column=1,sticky='se')
+        self.e=Button(self.top,text="Cancel",command=self.cleanup_no,bg=DEFAULT_SETTINGS.root_fg, fg=DEFAULT_SETTINGS.root_bg)
+        self.e.grid(row=1,column=2,sticky='sw')
+        self.style4=ttk.Style()
+        self.style4.configure('Normal.TCheckbutton',
+                             background='green',
+                             foreground='black')
+        self.checkm_vars={}
+        self.checkm_buttons={}
+        self.new_df=new_df
+        unique_labels=self.new_df['label_i'].unique()
+
+        for i,label in enumerate(unique_labels):
+            self.checkm_vars[label]=tk.IntVar()
+            self.checkm_vars[label].set(1)
+            self.checkm_buttons[label]=ttk.Checkbutton(self.top, style='Normal.TCheckbutton',text=label,variable=self.checkm_vars[label],onvalue=1, offvalue=0)
+            self.checkm_buttons[label].grid(row=i+1,column=3,sticky='sw')     
+            
+    def cleanup_yes(self):
+        KEEPCLASS_LIST=[]
+        for label_i,value_i in self.checkm_vars.items():
+            if value_i.get()==1:
+                KEEPCLASS_LIST.append(label_i)
+        self.unique_xmls=list(self.new_df[self.new_df['label_i'].isin(KEEPCLASS_LIST)]['path_anno_i'].unique())
+        self.new_df=self.new_df[self.new_df['path_anno_i'].isin(self.unique_xmls)].reset_index().drop('index',axis=1)
+        self.value=self.new_df
+        self.top.destroy()
+    def cleanup_no(self):
+        KEEPCLASS_LIST=[]
+        self.value=pd.DataFrame()
+        self.top.destroy()
+
+class popupWindow_BLACKPATCHES(object):
+    def __init__(self,master,df,df_filename,df_filename_csv):
+        self.top=tk.Toplevel(master)
+        self.top.geometry( "{}x{}".format(ROOT_W//2,ROOT_H//2) )
+        self.top.configure(background = 'black')
+        self.l=Button(self.top,text="Submit",command=self.cleanup_yes,bg=DEFAULT_SETTINGS.root_fg, fg=DEFAULT_SETTINGS.root_bg)
+        self.l.grid(row=1,column=1,sticky='se')
+        self.e=Button(self.top,text="Cancel",command=self.cleanup_no,bg=DEFAULT_SETTINGS.root_fg, fg=DEFAULT_SETTINGS.root_bg)
+        self.e.grid(row=1,column=2,sticky='sw')
+        self.style4=ttk.Style()
+        self.style4.configure('Normal.TCheckbutton',
+                             background='green',
+                             foreground='black')
+        self.checkm_vars={}
+        self.checkm_buttons={}
+        self.new_df=df.copy()
+        self.df=df.copy()
+        self.df_filename=df_filename
+        self.df_filename_csv=df_filename_csv
+        unique_labels=self.new_df['label_i'].unique()
+
+        for i,label in enumerate(unique_labels):
+            self.checkm_vars[label]=tk.IntVar()
+            self.checkm_vars[label].set(1)
+            self.checkm_buttons[label]=ttk.Checkbutton(self.top, style='Normal.TCheckbutton',text=label,variable=self.checkm_vars[label],onvalue=1, offvalue=0)
+            self.checkm_buttons[label].grid(row=i+1,column=3,sticky='sw')     
+            
+    def cleanup_yes(self):
+        BLACKPATCHES_LIST=[]
+        for label_i,value_i in self.checkm_vars.items():
+            if value_i.get()==1:
+                BLACKPATCHES_LIST.append(label_i)
+        self.new_df=self.new_df[self.new_df['label_i'].isin(BLACKPATCHES_LIST)]
+        self.bad_index_list=[]
+        for row in tqdm(range(len(self.new_df))):
+            self.index_bad=self.new_df.iloc[row].name
+            path_jpeg_i=self.new_df['path_jpeg_i'].iloc[row]
+            xmin=self.new_df['xmin'].iloc[row]
+            xmax=self.new_df['xmax'].iloc[row]
+            ymin=self.new_df['ymin'].iloc[row]
+            ymax=self.new_df['ymax'].iloc[row]
+            self.img_i=cv2.imread(path_jpeg_i)
+            if len(self.img_i.shape)==3:
+                self.img_i[ymin:ymax,xmin:xmax,:]=0.
+            else:
+                self.img_i[ymin:ymax,xmin:xmax]=0.
+            cv2.imwrite(path_jpeg_i,self.img_i)
+
+            #try:
+            
+            xmin=str(xmin)
+            ymin=str(ymin)
+            xmax=str(xmax)
+            ymax=str(ymax)
+
+            label_k=self.df['label_i'][self.index_bad]
+            path_anno_bad=self.df['path_anno_i'][self.index_bad]
+
+            assert path_jpeg_i==self.df['path_jpeg_i'][self.index_bad]
+            f=open(path_anno_bad,'r')
+            f_read=f.readlines()
+            f.close()
+            f_new=[]
+            start_line=0
+            end_line=0
+
+            self.bad_index_list.append(self.index_bad)
+            for ii,line in enumerate(f_read):
+                if line.find(label_k)!=-1:   
+                    combo_i=f_read[ii-1:]
+                    combo_i="".join([w for w in combo_i])
+                    combo_i=combo_i.split('<object>')
+                    #print(len(combo_i),combo_i)
+                    if len(combo_i)>1:
+                        if combo_i[1].find(xmin)!=-1 and combo_i[1].find(xmax)!=-1 and combo_i[1].find(ymin)!=-1 and combo_i[1].find(ymax)!=-1:
+                            start_line=ii-1
+                            for jj,line_j in enumerate(f_read[ii:]):
+                                if line_j.find('</object>')!=-1:
+                                    end_line=jj+ii
+                                    print('found label_k',label_k)
+                                    print('deleting bounding box')
+                                    print('xmin',xmin)
+                                    print('xmax',xmax)
+                                    print('ymin',ymin)
+                                    print('ymax',ymax)
+                            f_new.append(line)
+                        else:
+                            f_new.append(line)
+                    else:
+                        f_new.append(line)
+                else:
+                    f_new.append(line)
+            f_new=f_new[:start_line]+f_new[end_line+1:]
+            f=open(path_anno_bad,'w')
+            [f.writelines(w) for w in f_new]
+            f.close()  
+
+            #except:
+                #print('This ship has sailed, item not found.')
+        print('cleaning  up the dataframe')
+        for bad_index in tqdm(self.bad_index_list):
+            self.df=self.df.drop(bad_index,axis=0)
+        self.df=self.df.reset_index().drop('index',axis=1)
+        self.df.to_pickle(self.df_filename)
+        self.df.to_csv(self.df_filename_csv,index=None)
+        self.value=self.df
+        self.top.destroy()
+    def cleanup_no(self):
+        KEEPCLASS_LIST=[]
+        self.value=self.df
+        self.top.destroy()
+
 class popupWindowDropDown(object):
     def __init__(self,master,dic_i):
         options=[]
@@ -607,6 +807,7 @@ class MOSAIC:
         self.c=Button(self.top,text='Close',command=self.cleanup,bg=DEFAULT_SETTINGS.root_fg, fg=DEFAULT_SETTINGS.root_bg)
         self.c.pack()
         self.show_table()
+
     def cleanup_show(self):
         self.app.table.saveAs(self.df_filename_csv)
         print('self.df_filename')
@@ -632,6 +833,70 @@ class MOSAIC:
         print(self.w.value)
         root_tk.title("MOSAIC Chip Sorter")
         return self.w.value
+
+    def popup_create_blackpatches(self):
+        root_tk.title('Do you want to create black patches on these classes?')
+        self.w=popupWindow_BLACKPATCHES(root_tk,self.df,self.df_filename,self.df_filename_csv)
+        root_tk.wait_window(self.w.top)
+        print(self.w.value)
+        root_tk.title("MOSAIC Chip Sorter")
+        return self.w.value
+
+    def export_new_df(self):
+        self.new_df_basepath=os.path.dirname(self.path_Annotations)
+        self.new_df_basepath=os.path.join(self.new_df_basepath,'NEW_DATASET')
+        if os.path.exists(self.new_df_basepath)==False:
+            os.makedirs(self.new_df_basepath)
+        else:
+            #TD poupwindow to decide to remove existing
+            #os.system(f'rm -rf {self.new_df_basepath}')
+            self.new_df_basepath=self.new_df_basepath+"_"+str(time.time()).split('.')[0]
+            os.makedirs(self.new_df_basepath)
+
+        self.path_Annotations_new_df=os.path.join(self.new_df_basepath,'Annotations')
+        self.path_JPEGImages_new_df=os.path.join(self.new_df_basepath,'JPEGImages')
+        if os.path.exists(self.path_Annotations_new_df)==False:
+            os.makedirs(self.path_Annotations_new_df)
+        else:
+            os.system(f'rm -rf {self.path_Annotations_new_df}')
+            os.makedirs(self.path_Annotations_new_df)
+        if os.path.exists(self.path_JPEGImages_new_df)==False:
+            os.makedirs(self.path_JPEGImages_new_df)
+        else:
+            os.system(f'rm -rf {self.path_JPEGImages_new_df}')
+            os.makedirs(self.path_JPEGImages_new_df)
+        print('Copying Selection of JPEGImages to NEW_DATASET/JPEGImages')
+        for jpg_i in tqdm(self.new_df['path_jpeg_i']):
+            shutil.copy(jpg_i,self.path_JPEGImages_new_df)
+        self.new_df['path_jpeg_i']=[os.path.join(self.path_JPEGImages_new_df,os.path.basename(w)) for w in self.new_df['path_jpeg_i']]
+
+        print('Copying Selection of Annotations to NEW_DATASET/Annotations')
+        for anno_i in tqdm(self.new_df['path_anno_i']):
+            shutil.copy(anno_i,self.path_Annotations_new_df)
+        self.new_df['path_anno_i']=[os.path.join(self.path_Annotations_new_df,os.path.basename(w)) for w in self.new_df['path_anno_i']]
+
+        self.new_df_filename=os.path.join(self.new_df_basepath,"df_{}.pkl".format(os.path.basename(self.new_df_basepath)))
+        self.new_df_filename_csv=self.new_df_filename.replace('.pkl','.csv')       
+
+        self.new_df.to_pickle(self.new_df_filename)
+        self.new_df.to_csv(self.new_df_filename_csv,index=None)
+
+        from multiprocessing import Process
+        # Start new process with our new dataset
+        cmd_i=f'{self.PYTHON_PATH} MOSAIC_Chip_Sorter.py --path_Annotations "{self.path_Annotations_new_df}" --path_JPEGImages "{self.path_JPEGImages_new_df}"'
+        Process(target=self.run_cmd,args=(cmd_i,)).start()
+
+    def create_new_df(self):
+        self.new_df=self.df.copy()
+        self.new_df=self.popup_create_newdf(self.new_df)
+        if len(self.new_df)>0:
+            self.export_new_df()
+        else:
+            print('No new dataset is being created')
+        #TD popupwindow to decide what classes to keep
+
+    def create_blackpatches(self):
+        self.df=self.popup_create_blackpatches()
         
     def plot_dx_dy(self):
         if _platform!='darwin':
@@ -703,90 +968,122 @@ class MOSAIC:
         else:
             iou=1
         return iou
-    def chips(self):
-        self.unique_labels={w:i for i,w in enumerate(self.df['label_i'].unique())}
-        self.basePath_chips=os.path.join(self.basePath,'chips')
-        if os.path.exists(self.basePath_chips):
-            remove_directory(self.basePath_chips)
-            #os.system('rm -rf {}'.format(self.basePath_chips))
-        os.makedirs(self.basePath_chips)
-        for label_i in tqdm(self.unique_labels):
-            self.df_chips=self.df[self.df['label_i']==label_i].reset_index().drop('index',axis=1).copy()
-            self.path_chips_label_i=os.path.join(self.basePath_chips,label_i)
-            self.path_chips_label_i_BLANK=os.path.join(self.basePath_chips,label_i+'_BLANK')
-            if os.path.exists(self.path_chips_label_i):
-                pass
-            else:
-                os.makedirs(self.path_chips_label_i)
-            if os.path.exists(self.path_chips_label_i_BLANK):
-                pass
-            else:
-                os.makedirs(self.path_chips_label_i_BLANK)
-            for anno,jpg in tqdm(zip(self.df_chips.path_anno_i,self.df_chips.path_jpeg_i)):
-                anno_i=os.path.basename(anno) #.split('/')[-1]
-                jpg_i=os.path.basename(jpg) #.split('/')[-1]
-                path_chip_anno=os.path.join(self.path_Annotations,anno_i)
-                path_chip_jpeg=os.path.join(self.path_JPEGImages,jpg_i)
-                self.df_chips_i=self.df_chips[self.df_chips['path_anno_i']==anno].reset_index().drop('index',axis=1)
-                image=cv2.imread(path_chip_jpeg)
-                for j,row in enumerate(range(len(self.df_chips_i))):
-                    xmin=self.df_chips_i['xmin'].iloc[row]
-                    xmax=self.df_chips_i['xmax'].iloc[row]
-                    ymin=self.df_chips_i['ymin'].iloc[row]
-                    ymax=self.df_chips_i['ymax'].iloc[row]
-                    label_i=self.df_chips_i['label_i'].iloc[row]
-                    label_i_BLANK=label_i+'_BLANK'
-                    chipA=image[ymin:ymax,xmin:xmax]
-                    chip_name_i=label_i+"_"+jpg_i.split('.')[0]+'_chip{}of{}_'.format(self.pad(str(j)),self.pad(str(len(self.df_chips_i))))+'_ymin{}'.format(ymin)+'_ymax{}'.format(ymax)+'_xmin{}'.format(xmin)+'_xmax{}.jpg'.format(xmax)
-                    chip_name_i=os.path.join(self.path_chips_label_i,chip_name_i)
-                    try:
-                        cv2.imwrite(chip_name_i,chipA)
-                        #CREATE BLANK CHIP
-                        dx=xmax-xmin
-                        factor=1.5
-                        if xmin>0.5*image.shape[1]:
-                            xminB=xmin-dx*factor
-                            xmaxB=xmax-dx*factor
-                        else:
-                            xminB=xmin+dx*factor
-                            xmaxB=xmax+dx*factor
-                        xminB=int(max(0,xminB))
-                        xmaxB=int(min(image.shape[1],xmaxB))
-                        dy=ymax-ymin
-                        if ymin>0.5*image.shape[0]:
-                            yminB=ymin-dy*factor
-                            ymaxB=ymax-dy*factor
-                        else:
-                            yminB=ymin+dy*factor
-                            ymaxB=ymax+dy*factor
-                        yminB=int(max(0,yminB))
-                        ymaxB=int(min(image.shape[0],ymaxB))
-                        chipBLANK=image[yminB:ymaxB,xminB:xmaxB]
-                        boxBlank=(xminB,yminB,xmaxB,ymaxB)                   
-                        iou=0
-                        for p,rowp in enumerate(range(len(self.df_chips_i))):
-                            xminp=self.df_chips_i['xmin'].iloc[rowp]
-                            xmaxp=self.df_chips_i['xmax'].iloc[rowp]
-                            yminp=self.df_chips_i['ymin'].iloc[rowp]
-                            ymaxp=self.df_chips_i['ymax'].iloc[rowp]
-                            boxFull=(xminp,yminp,xmaxp,ymaxp)
-                            ioup=self.bb_intersection(boxBlank,boxFull)
-                            if ioup>iou:
-                                iou=ioup
-                        if iou<0.2:
-                            chip_name_i=label_i_BLANK+"_"+jpg_i.split('.')[0]+'_chip{}of{}_'.format(self.pad(str(j)),self.pad(str(len(self.df_chips_i))))+'_ymin{}'.format(ymin)+'_ymax{}'.format(ymax)+'_xmin{}'.format(xmin)+'_xmax{}.jpg'.format(xmax)
-                            chip_name_i=os.path.join(self.path_chips_label_i_BLANK,chip_name_i)
-                            #print('yminB:ymaxB,xminB:xmaxB')
-                            #print('{}:{},{}:{}'.format(yminB,ymaxB,xminB,xmaxB))
-                            #print('image.shape')
-                            #print(image.shape)
-                            try:
-                                cv2.imwrite(chip_name_i,chipBLANK)
-                            except:
-                                print('BAD ASSERTION,skipping this chip')
-                    except:
-                        print('BAD ASSERTION,skipping this chip')
-
+    def chips(self,BLANK):
+        CHIP_LIST=self.popup_chips(self.df['label_i'].unique())
+        if len(CHIP_LIST)>0:
+            self.unique_labels={w:i for i,w in enumerate(CHIP_LIST)}
+            self.basePath_chips=os.path.join(self.basePath,'chips')
+            if os.path.exists(self.basePath_chips):
+                CLEAR_EXISTING_CHIPS=self.popup_chips_CLEAREXISTING(self.basePath_chips)
+                if CLEAR_EXISTING_CHIPS:
+                    if os.path.exists(self.basePath_chips):
+                        remove_directory(self.basePath_chips)
+                #os.system('rm -rf {}'.format(self.basePath_chips))
+            try:
+                os.makedirs(self.basePath_chips)
+            except:
+                print('Already exists')
+            for label_i in tqdm(self.unique_labels):
+                self.df_chips=self.df[self.df['label_i']==label_i].reset_index().drop('index',axis=1).copy()
+                self.path_chips_label_i=os.path.join(self.basePath_chips,label_i)
+                if BLANK:
+                    self.path_chips_label_i_BLANK=os.path.join(self.basePath_chips,label_i+'_BLANK')
+                if os.path.exists(self.path_chips_label_i):
+                    pass
+                else:
+                    os.makedirs(self.path_chips_label_i)
+                if BLANK:
+                    if os.path.exists(self.path_chips_label_i_BLANK):
+                        pass
+                    else:
+                        os.makedirs(self.path_chips_label_i_BLANK)
+                for anno,jpg in tqdm(zip(self.df_chips.path_anno_i,self.df_chips.path_jpeg_i)):
+                    anno_i=os.path.basename(anno) #.split('/')[-1]
+                    jpg_i=os.path.basename(jpg) #.split('/')[-1]
+                    path_chip_anno=os.path.join(self.path_Annotations,anno_i)
+                    path_chip_jpeg=os.path.join(self.path_JPEGImages,jpg_i)
+                    self.df_chips_i=self.df_chips[self.df_chips['path_anno_i']==anno].reset_index().drop('index',axis=1)
+                    image=cv2.imread(path_chip_jpeg)
+                    for j,row in enumerate(range(len(self.df_chips_i))):
+                        xmin=self.df_chips_i['xmin'].iloc[row]
+                        xmax=self.df_chips_i['xmax'].iloc[row]
+                        ymin=self.df_chips_i['ymin'].iloc[row]
+                        ymax=self.df_chips_i['ymax'].iloc[row]
+                        label_i=self.df_chips_i['label_i'].iloc[row]
+                        if BLANK:
+                            label_i_BLANK=label_i+'_BLANK'
+                        chipA=image[ymin:ymax,xmin:xmax]
+                        chip_name_i=label_i+"_"+jpg_i.split('.')[0]+'_chip{}of{}_'.format(self.pad(str(j)),self.pad(str(len(self.df_chips_i))))+'_ymin{}'.format(ymin)+'_ymax{}'.format(ymax)+'_xmin{}'.format(xmin)+'_xmax{}.jpg'.format(xmax)
+                        chip_name_i=os.path.join(self.path_chips_label_i,chip_name_i)
+                        try:
+                            cv2.imwrite(chip_name_i,chipA)
+                            if BLANK:
+                                #CREATE BLANK CHIP
+                                dx=xmax-xmin
+                                factor=1.5
+                                if xmin>0.5*image.shape[1]:
+                                    xminB=xmin-dx*factor
+                                    xmaxB=xmax-dx*factor
+                                else:
+                                    xminB=xmin+dx*factor
+                                    xmaxB=xmax+dx*factor
+                                xminB=int(max(0,xminB))
+                                xmaxB=int(min(image.shape[1],xmaxB))
+                                dy=ymax-ymin
+                                if ymin>0.5*image.shape[0]:
+                                    yminB=ymin-dy*factor
+                                    ymaxB=ymax-dy*factor
+                                else:
+                                    yminB=ymin+dy*factor
+                                    ymaxB=ymax+dy*factor
+                                yminB=int(max(0,yminB))
+                                ymaxB=int(min(image.shape[0],ymaxB))
+                                chipBLANK=image[yminB:ymaxB,xminB:xmaxB]
+                                boxBlank=(xminB,yminB,xmaxB,ymaxB)                   
+                                iou=0
+                                for p,rowp in enumerate(range(len(self.df_chips_i))):
+                                    xminp=self.df_chips_i['xmin'].iloc[rowp]
+                                    xmaxp=self.df_chips_i['xmax'].iloc[rowp]
+                                    yminp=self.df_chips_i['ymin'].iloc[rowp]
+                                    ymaxp=self.df_chips_i['ymax'].iloc[rowp]
+                                    boxFull=(xminp,yminp,xmaxp,ymaxp)
+                                    ioup=self.bb_intersection(boxBlank,boxFull)
+                                    if ioup>iou:
+                                        iou=ioup
+                                if iou<0.2:
+                                    chip_name_i=label_i_BLANK+"_"+jpg_i.split('.')[0]+'_chip{}of{}_'.format(self.pad(str(j)),self.pad(str(len(self.df_chips_i))))+'_ymin{}'.format(ymin)+'_ymax{}'.format(ymax)+'_xmin{}'.format(xmin)+'_xmax{}.jpg'.format(xmax)
+                                    chip_name_i=os.path.join(self.path_chips_label_i_BLANK,chip_name_i)
+                                    #print('yminB:ymaxB,xminB:xmaxB')
+                                    #print('{}:{},{}:{}'.format(yminB,ymaxB,xminB,xmaxB))
+                                    #print('image.shape')
+                                    #print(image.shape)
+                                    try:
+                                        cv2.imwrite(chip_name_i,chipBLANK)
+                                    except:
+                                        print('BAD ASSERTION,skipping this chip')
+                        except:
+                            print('BAD ASSERTION,skipping this chip')
+    def popup_create_newdf(self,unique_labels):
+        root_tk.title('Which clases do you want to create a new dataset with?')
+        self.w= popupWindow_KEEPCLASS(root_tk,unique_labels)
+        root_tk.wait_window(self.w.top)
+        print(self.w.value)
+        root_tk.title('MOSAIC Chip Sorter')
+        return self.w.value
+    def popup_chips(self,unique_labels):
+        root_tk.title('Which Chips?')
+        self.w= popupWindow_CHIPS(root_tk,unique_labels)
+        root_tk.wait_window(self.w.top)
+        print(self.w.value)
+        root_tk.title('MOSAIC Chip Sorter')
+        return self.w.value
+    def popup_chips_CLEAREXISTING(self,path_chips):
+        root_tk.title('CLEAR EXISTING CHIPS?')
+        self.w= popupWindow_CHIPS_CLEAR(root_tk,path_chips)
+        root_tk.wait_window(self.w.top)
+        print(self.w.value)
+        root_tk.title('MOSAIC Chip Sorter')
+        return self.w.value
     def popup(self):
         root_tk.title('')
         self.w=popupWindow(root_tk)
@@ -941,6 +1238,17 @@ class MOSAIC:
             xmltree = ElementTree.parse(path_anno_i, parser=parser).getroot()
         except:
             print(path_anno_i)
+            f=open(path_anno_i,'r')
+            f_read=f.readlines()
+            f.close()
+            f_new=[]
+            if f_read[0].find('annotation')==-1:
+                f_new.append('<annotation>\n')
+                for line in f_read:
+                    f_new.append(line)
+                f=open(path_anno_i,'w')
+                [f.writelines(w) for w in f_new]
+                f.close()
             xmltree = ElementTree.parse(path_anno_i, parser=parser).getroot()
         filename = xmltree.find('filename').text
         width_i=xmltree.find('size').find('width').text
@@ -1665,6 +1973,12 @@ class MOSAIC:
                     else:
                         f_new.append(line)
                 f_new=f_new[:start_line]+f_new[end_line+1:]
+                if f_new[0].find('annotation')==-1:
+                    f_old=f_new
+                    f_new=[]
+                    f_new.append('<annotation>\n')
+                    f_new=f_new+f_old
+                    print('fixed that before it forgot the first part')
                 f=open(path_anno_bad,'w')
                 [f.writelines(w) for w in f_new]
                 f.close()  
@@ -1935,7 +2249,11 @@ class MOSAIC:
                 self.longest=max(self.ymax_i-self.ymin_i,self.xmax_i-self.xmin_i)
 
                 self.chip_i=self.jpg_i[self.ymin_i:self.ymax_i,self.xmin_i:self.xmax_i,:]
-                self.chip_square_i=Image.fromarray(self.chip_i) 
+                try:
+                    self.chip_square_i=Image.fromarray(self.chip_i) 
+                except:
+                    print(self.df['path_jpeg_i'].iloc[i])
+                    self.chip_square_i=Image.fromarray(self.chip_i)   
 
                 self.chip_square_i=self.chip_square_i.resize((self.W,self.H),Image.ANTIALIAS)
                 self.chip_square_i=np.array(self.chip_square_i)
@@ -3119,6 +3437,10 @@ class App:
         self.make_chips_note=tk.Label(self.root,text='15. \n Make Chips',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.make_chips_note.grid(row=10,column=31,sticky='ne')
 
+        self.checkbutton_blanks()
+        self.make_blank_chips_note=tk.Label(self.root,text='Make Blank Chips?',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.make_blank_chips_note.grid(row=10,column=32,sticky='ne')
+
         self.change_labels_button=Button(self.root,image=self.icon_create,command=self.change_labels,bg=self.root_bg,fg=self.root_fg)
         self.change_labels_button.grid(row=11,column=31,sticky='se')
         self.change_labels_note=tk.Label(self.root,text='16. \n Change Labels',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
@@ -3132,7 +3454,32 @@ class App:
         self.look_at_objects_button=Button(self.root,image=self.icon_analyze,command=self.look_at_objects,bg=self.root_bg,fg=self.root_fg)
         self.look_at_objects_button.grid(row=15,column=31,sticky='se')
         self.look_at_objects_note=tk.Label(self.root,text='18. \n Look at Objects',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
-        self.look_at_objects_note.grid(row=16,column=31,sticky='ne')        
+        self.look_at_objects_note.grid(row=16,column=31,sticky='ne') 
+
+        self.create_new_df_button=Button(self.root,image=self.icon_create,command=self.create_new_df,bg=self.root_bg,fg=self.root_fg)
+        self.create_new_df_button.grid(row=17,column=31,sticky='se')
+        self.create_new_df_note=tk.Label(self.root,text='19. \n Create New Dataset',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.create_new_df_note.grid(row=18,column=31,sticky='ne')       
+
+        self.create_blackpatches_button=Button(self.root,image=self.icon_create,command=self.create_blackpatches,bg=self.root_bg,fg=self.root_fg)
+        self.create_blackpatches_button.grid(row=13,column=32,sticky='se')
+        self.create_blackpatches_note=tk.Label(self.root,text='20. \n Create Black Patches',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.create_blackpatches_note.grid(row=14,column=32,sticky='ne')    
+
+    def checkbutton_blanks(self):
+        self.BLANK_boolean_var = tk.BooleanVar()
+        self.style3=ttk.Style()
+        self.style3.configure('Normal.TRadiobutton',
+                             background='green',
+                             foreground='black')
+        self.option_yes = ttk.Radiobutton(self.root, text="Yes", style='Normal.TRadiobutton',variable=self.BLANK_boolean_var,
+                                         value=True, command=self.callback_yes_no)
+        self.option_no = ttk.Radiobutton(self.root, text="No", style='Normal.TRadiobutton', variable=self.BLANK_boolean_var,
+                                        value=False, command=self.callback_yes_no)
+        self.option_yes.grid(row=10, column=33,sticky='ne')
+        self.option_no.grid(row=10, column=34,sticky='nw')
+    def callback_yes_no(self):
+        self.BLANK_boolean_var.set(self.BLANK_boolean_var.get())
 
     def get_DXDY(self):
         self.DX_MAX=int(self.DX_MAX_VAR.get())
@@ -3181,8 +3528,16 @@ class App:
         self.MOSAIC.load()
         self.MOSAIC.look_at_target(self.target_i.get())
         self.update_counts('na')
+
+
     def make_chips(self):
-        self.MOSAIC.chips()
+        BLANK=self.BLANK_boolean_var.get()
+        self.MOSAIC.chips(BLANK)
+        self.update_counts('na')
+    def create_new_df(self):
+        self.MOSAIC.run_cmd=self.run_cmd
+        self.MOSAIC.PYTHON_PATH=self.PYTHON_PATH
+        self.MOSAIC.create_new_df()
         self.update_counts('na')
     def change_labels(self):
         self.MOSAIC.popup_changelabels()
@@ -3190,6 +3545,10 @@ class App:
         self.update_counts('na')
     def remove_blanks(self):
         self.MOSAIC.remove_blanks()
+        self.load_df()
+        self.update_counts('na')
+    def create_blackpatches(self):
+        self.MOSAIC.create_blackpatches()
         self.load_df()
         self.update_counts('na')
     def look_at_objects(self):
