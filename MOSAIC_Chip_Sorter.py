@@ -416,11 +416,29 @@ class popupWindow_KEEPCLASS(object):
         self.new_df=new_df
         unique_labels=self.new_df['label_i'].unique()
 
+        self.label_class=tk.Label(self.top,text='Classes to keep',bg=DEFAULT_SETTINGS.root_fg, fg=DEFAULT_SETTINGS.root_bg,font=('Arial 10 underline'))
+        self.label_class.grid(row=0,column=3,sticky='se')
         for i,label in enumerate(unique_labels):
             self.checkm_vars[label]=tk.IntVar()
             self.checkm_vars[label].set(1)
             self.checkm_buttons[label]=ttk.Checkbutton(self.top, style='Normal.TCheckbutton',text=label,variable=self.checkm_vars[label],onvalue=1, offvalue=0)
-            self.checkm_buttons[label].grid(row=i+1,column=3,sticky='sw')     
+            self.checkm_buttons[label].grid(row=i+1,column=3,sticky='sw')    
+
+        self.difficulty_label=tk.Label(self.top,text='Difficulty to keep',bg=DEFAULT_SETTINGS.root_fg, fg=DEFAULT_SETTINGS.root_bg,font=('Arial 10 underline'))
+        self.difficulty_label.grid(row=0,column=5,sticky='se')
+        self.diff_vars={}
+        self.diff_buttons={}
+        self.diff_vars['0']=tk.IntVar()
+        self.diff_vars['0'].set(1)
+        self.diff_vars['1']=tk.IntVar()
+        self.diff_vars['1'].set(1)
+        self.diff_buttons['0']=ttk.Checkbutton(self.top, style='Normal.TCheckbutton',text='0 = not difficult',variable=self.diff_vars['0'],onvalue=1, offvalue=0)
+        self.diff_buttons['0'].grid(row=1,column=5,sticky='se')
+        self.diff_buttons['1']=ttk.Checkbutton(self.top, style='Normal.TCheckbutton',text='1 = difficult',variable=self.diff_vars['1'],onvalue=1, offvalue=0)
+        self.diff_buttons['1'].grid(row=2,column=5,sticky='se')
+
+
+
             
     def cleanup_yes(self):
         KEEPCLASS_LIST=[]
@@ -429,6 +447,12 @@ class popupWindow_KEEPCLASS(object):
                 KEEPCLASS_LIST.append(label_i)
         self.unique_xmls=list(self.new_df[self.new_df['label_i'].isin(KEEPCLASS_LIST)]['path_anno_i'].unique())
         self.new_df=self.new_df[self.new_df['path_anno_i'].isin(self.unique_xmls)].reset_index().drop('index',axis=1)
+        keep_diff_list=[]
+        if self.diff_vars['0'].get()==1:
+            keep_diff_list.append('0')
+        if self.diff_vars['1'].get()==1:
+            keep_diff_list.append('1')
+        self.new_df=self.new_df[self.new_df['difficulty'].isin(keep_diff_list)].reset_index().drop('index',axis=1)
         self.value=self.new_df
         self.top.destroy()
     def cleanup_no(self):
@@ -622,10 +646,12 @@ class popupWindow_FAKEPATCHES(object):
                         list_of_acceptable_jpegs=list(self.new_df['path_jpeg_i'].unique())
                         label_k=self.df['label_i'][self.index_bad]
                         if path_jpeg_i not in list_of_acceptable_jpegs:
-                            os.remove(path_jpeg_i)
+                            if os.path.exists(path_jpeg_i):
+                                os.remove(path_jpeg_i)
                             self.bad_index_list.append(self.index_bad)
                             path_anno_bad=self.df['path_anno_i'][self.index_bad]
-                            os.remove(path_anno_bad)
+                            if os.path.exists(path_anno_bad):
+                                os.remove(path_anno_bad)
                         elif label_k in FAKEPATCHES_LIST:
                             pass
                         else:
@@ -862,6 +888,11 @@ class MOSAIC:
         self.total_checked_good=tk.StringVar()
         self.total_checked_bad=tk.StringVar()
         self.useSSIM=DEFAULT_SETTINGS.useSSIM
+        try:
+            self.difficult_keyword=DEFAULT_SETTINGS.difficult_keyword
+        except:
+            self.difficult_keyword='difficult' #used for sorting annotations
+
         self.plotting_dx_dy=False
         self.ROOT_H=ROOT_H
         self.ROOT_W=ROOT_W
@@ -899,6 +930,9 @@ class MOSAIC:
             self.df['DX']=self.df.xmax-self.df.xmin
         if 'DY' not in self.df.columns:
             self.df['DY']=self.df.ymax-self.df.ymin
+        if 'difficulty' not in self.df.columns:
+            self.df['difficulty']=self.df['label_i'].copy()
+            self.df['difficulty']=['0' for w in self.df['difficulty']]
         self.unique_labels={w:i for i,w in enumerate(self.df['label_i'].unique())}
         self.clear_fix_bad()
         self.DX_MIN=min(self.df.DX)
@@ -919,6 +953,8 @@ class MOSAIC:
         self.df['label_i_int']=[self.label_dic[w] for w in self.df['label_i']]
         self.rev_label_dic={v:k for k,v in self.label_dic.items()}
         self.SHOWTABLE_BUTTONS()
+        self.df.to_pickle(self.df_filename)
+        self.df.to_csv(self.df_filename_csv,index=None)
 
     def remove_blanks(self):
         unique_annos_notblank=self.df.path_anno_i.unique()
@@ -1099,7 +1135,97 @@ class MOSAIC:
         plt.tight_layout()
         plt.show()
     def filter_dxdy(self,DX_MIN,DX_MAX,DY_MIN,DY_MAX):
-        self.df=self.df[(self.df['DX']>=DX_MIN) & (self.df['DX']<=DX_MAX) & (self.df['DY']>=DY_MIN) & (self.df['DY']<=DY_MAX)].reset_index().drop('index',axis=1)
+        self.new_df=self.df[(self.df['DX']>=DX_MIN) & (self.df['DX']<=DX_MAX) & (self.df['DY']>=DY_MIN) & (self.df['DY']<=DY_MAX)].copy()#.reset_index().drop('index',axis=1).copy()
+        self.bad_index_list=[]
+        for row in tqdm(range(len(self.df))):
+            self.index_bad=self.df.iloc[row].name
+            path_jpeg_i=self.df['path_jpeg_i'].iloc[row]
+            list_of_acceptable_jpegs=list(self.new_df['path_jpeg_i'].unique())
+            label_k=self.df['label_i'][self.index_bad]
+            self.new_df_index_list=list(self.new_df.index)
+            if path_jpeg_i not in list_of_acceptable_jpegs:
+                if os.path.exists(path_jpeg_i):
+                    os.remove(path_jpeg_i)
+                self.bad_index_list.append(self.index_bad)
+                path_anno_bad=self.df['path_anno_i'][self.index_bad]
+                if os.path.exists(path_anno_bad):
+                    os.remove(path_anno_bad)
+            elif row in self.new_df_index_list:
+                pass
+            else:
+                xmin=self.df['xmin'].iloc[row]
+                xmax=self.df['xmax'].iloc[row]
+                ymin=self.df['ymin'].iloc[row]
+                ymax=self.df['ymax'].iloc[row]
+
+                #try:
+                
+                xmin=str(xmin)
+                ymin=str(ymin)
+                xmax=str(xmax)
+                ymax=str(ymax)
+
+                
+                path_anno_bad=self.df['path_anno_i'][self.index_bad]
+
+                assert path_jpeg_i==self.df['path_jpeg_i'][self.index_bad]
+                if os.path.exists(path_anno_bad):
+                    f=open(path_anno_bad,'r')
+                    f_read=f.readlines()
+                    f.close()
+                    try:
+                        f_read[0].find('annotation')!=-1
+                    except:
+                        pprint(f_read)
+                        assert f_read[0].find('annotation')!=-1
+                    f_new=[]
+                    start_line=0
+                    end_line=0
+
+                    self.bad_index_list.append(self.index_bad)
+                    for ii,line in enumerate(f_read):
+                        if line.find(label_k)!=-1:   
+                            combo_i=f_read[ii-1:]
+                            combo_i="".join([w.replace('\n','') for w in combo_i])
+                            combo_i=combo_i.split('<object>')
+                            #print(len(combo_i),combo_i)
+                            #if len(combo_i)>1:
+                            if combo_i[1].find(xmin)!=-1 and combo_i[1].find(xmax)!=-1 and combo_i[1].find(ymin)!=-1 and combo_i[1].find(ymax)!=-1:
+                                start_line=ii-1
+                                for jj,line_j in enumerate(combo_i[1].split('</')):
+                                    if line_j.find('object>')!=-1:
+                                        end_line=jj+ii
+                                        print('found label_k',label_k)
+                                        print('deleting bounding box')
+                                        print('xmin',xmin)
+                                        print('xmax',xmax)
+                                        print('ymin',ymin)
+                                        print('ymax',ymax)
+                                f_new.append(line)
+                            else:
+                                f_new.append(line)
+                            #else:
+                            #    f_new.append(line)
+                        else:
+                            f_new.append(line)
+                    if end_line!=0:
+                        f_new=f_new[:start_line]+f_new[end_line+1:]
+
+                    try:
+                        f_new[0].find('annotation')!=-1
+                    except:
+                        pprint(f_read)
+                        assert f_new[0].find('annotation')!=-1
+                    f=open(path_anno_bad,'w')
+                    [f.writelines(w) for w in f_new]
+                    f.close()
+
+                #except:
+                #    print('This ship has sailed, item not found.')
+        print('cleaning  up the dataframe')
+        for bad_index in tqdm(self.bad_index_list):
+            self.df=self.df.drop(bad_index,axis=0)
+        self.df=self.df.reset_index().drop('index',axis=1)
         self.df.to_pickle(self.df_filename)
         self.df.to_csv(self.df_filename_csv,index=None)
 
@@ -1239,9 +1365,10 @@ class MOSAIC:
                         except:
                             print('BAD ASSERTION,skipping this chip')
     def popup_create_newdf(self,unique_labels):
-        root_tk.title('Which clases do you want to create a new dataset with?')
+        root_tk.title('Which classes & difficulty do you want to create a new dataset with?')
         self.w= popupWindow_KEEPCLASS(root_tk,unique_labels)
         root_tk.wait_window(self.w.top)
+        root_tk.wm_state('iconic')#test
         print(self.w.value)
         root_tk.title('MOSAIC Chip Sorter')
         return self.w.value
@@ -1392,6 +1519,10 @@ class MOSAIC:
                 ymin = bndbox.find('ymin').text
                 xmax = bndbox.find('xmax').text
                 ymax = bndbox.find('ymax').text
+                try:
+                    difficulty_i=object_iter.find(self.difficult_keyword).text
+                except:
+                    difficulty_i='0'
                 self.df.at[i,'xmin']=xmin
                 self.df.at[i,'xmax']=xmax
                 self.df.at[i,'ymin']=ymin
@@ -1401,6 +1532,7 @@ class MOSAIC:
                 self.df.at[i,'label_i']=label
                 self.df.at[i,'path_jpeg_i']=path_jpeg_i.replace('_tofix','')
                 self.df.at[i,'path_anno_i']=path_anno_i.replace('_tofix','')
+                self.df.at[i,'difficulty']=difficulty_i
                 self.df.at[i,'checked']=''
                 i+=1
         self.df.to_pickle(self.df_filename)
@@ -1436,6 +1568,10 @@ class MOSAIC:
             ymin = bndbox.find('ymin').text
             xmax = bndbox.find('xmax').text
             ymax = bndbox.find('ymax').text
+            try:
+                difficulty_i=object_iter.find(self.difficult_keyword).text
+            except:
+                difficulty_i='0'
             df.at[i,'xmin']=xmin
             df.at[i,'xmax']=xmax
             df.at[i,'ymin']=ymin
@@ -1445,6 +1581,7 @@ class MOSAIC:
             df.at[i,'label_i']=label
             df.at[i,'path_jpeg_i']=path_jpeg_i
             df.at[i,'path_anno_i']=path_anno_i
+            df.at[i,'difficulty']=difficulty_i
             i+=1    
         df_queue_i.put(df)    
 
@@ -1455,7 +1592,8 @@ class MOSAIC:
         self.JPEGs=[os.path.join(self.path_JPEGImages,Anno.split(self.XML_EXT)[0]+self.JPG_EXT) for Anno in self.Annotations_list if Anno.split(self.XML_EXT)[0]+self.JPG_EXT in self.JPEGs_list]
         assert len(self.JPEGs)==len(self.Annotations) 
 
-        self.df=pd.DataFrame(columns=['xmin','xmax','ymin','ymax','width','height','label_i','path_jpeg_i','path_anno_i'],dtype='object')
+        self.df=pd.DataFrame(columns=['xmin','xmax','ymin','ymax','width','height','label_i','path_jpeg_i','path_anno_i','difficulty'],dtype='object')
+
         from multiprocessing import Process,Queue
 
         if multiprocessing.cpu_count()>1:
@@ -1770,23 +1908,56 @@ class MOSAIC:
                             end_line=0
                             self.df.drop(self.index_bad,axis=0)
                             self.df=self.df.drop(self.index_bad,axis=0)
+                            # for ii,line in enumerate(f_read):
+                            #     if line.find(label_k)!=-1:
+                            #         print('found label_k',label_k)
+                            #         combo_i=f_read[ii-1:]
+                            #         combo_i="".join([w for w in combo_i])
+                            #         combo_i=combo_i.split('<object>')
+                            #         if combo_i[1].find(xmin)!=-1 and combo_i[1].find(xmax)!=-1 and combo_i[1].find(ymin)!=-1 and combo_i[1].find(ymax)!=-1:
+                            #             start_line=ii-1
+                            #             for jj,line_j in enumerate(f_read[ii:]):
+                            #                 if line_j.find('</object>')!=-1:
+                            #                     end_line=jj+ii
+                            #             f_new.append(line)
+                            #         else:
+                            #             f_new.append(line)
+                            #     else:
+                            #         f_new.append(line)
+                            # f_new=f_new[:start_line]+f_new[end_line+1:]
                             for ii,line in enumerate(f_read):
-                                if line.find(label_k)!=-1:
-                                    print('found label_k',label_k)
+                                if line.find(label_k)!=-1:   
                                     combo_i=f_read[ii-1:]
-                                    combo_i="".join([w for w in combo_i])
+                                    combo_i="".join([w.replace('\n','') for w in combo_i])
                                     combo_i=combo_i.split('<object>')
+                                    #print(len(combo_i),combo_i)
+                                    #if len(combo_i)>1:
                                     if combo_i[1].find(xmin)!=-1 and combo_i[1].find(xmax)!=-1 and combo_i[1].find(ymin)!=-1 and combo_i[1].find(ymax)!=-1:
                                         start_line=ii-1
-                                        for jj,line_j in enumerate(f_read[ii:]):
-                                            if line_j.find('</object>')!=-1:
+                                        for jj,line_j in enumerate(combo_i[1].split('</')):
+                                            if line_j.find('object>')!=-1:
                                                 end_line=jj+ii
+                                                print('found label_k',label_k)
+                                                print('deleting bounding box')
+                                                print('xmin',xmin)
+                                                print('xmax',xmax)
+                                                print('ymin',ymin)
+                                                print('ymax',ymax)
                                         f_new.append(line)
                                     else:
                                         f_new.append(line)
+                                    #else:
+                                    #    f_new.append(line)
                                 else:
                                     f_new.append(line)
-                            f_new=f_new[:start_line]+f_new[end_line+1:]
+                            if end_line!=0:
+                                f_new=f_new[:start_line]+f_new[end_line+1:]
+
+                            try:
+                                f_new[0].find('annotation')!=-1
+                            except:
+                                pprint(f_read)
+                                assert f_new[0].find('annotation')!=-1
                             f=open(path_anno_bad,'w')
                             [f.writelines(w) for w in f_new]
                             f.close()  
@@ -2131,29 +2302,63 @@ class MOSAIC:
                 end_line=0
                 self.df.drop(self.index_bad,axis=0)
                 self.df=self.df.drop(self.index_bad,axis=0)
+                # for ii,line in enumerate(f_read):
+                #     if line.find(label_k)!=-1:
+                #         print('found label_k',label_k)
+                #         combo_i=f_read[ii-1:]
+                #         combo_i="".join([w for w in combo_i])
+                #         combo_i=combo_i.split('<object>')
+                #         if combo_i[1].find(xmin)!=-1 and combo_i[1].find(xmax)!=-1 and combo_i[1].find(ymin)!=-1 and combo_i[1].find(ymax)!=-1:
+                #             start_line=ii-1
+                #             for jj,line_j in enumerate(f_read[ii:]):
+                #                 if line_j.find('</object>')!=-1:
+                #                     end_line=jj+ii
+                #             f_new.append(line)
+                #         else:
+                #             f_new.append(line)
+                #     else:
+                #         f_new.append(line)
+
                 for ii,line in enumerate(f_read):
-                    if line.find(label_k)!=-1:
-                        print('found label_k',label_k)
+                    if line.find(label_k)!=-1:   
                         combo_i=f_read[ii-1:]
-                        combo_i="".join([w for w in combo_i])
+                        combo_i="".join([w.replace('\n','') for w in combo_i])
                         combo_i=combo_i.split('<object>')
+                        #print(len(combo_i),combo_i)
+                        #if len(combo_i)>1:
                         if combo_i[1].find(xmin)!=-1 and combo_i[1].find(xmax)!=-1 and combo_i[1].find(ymin)!=-1 and combo_i[1].find(ymax)!=-1:
                             start_line=ii-1
-                            for jj,line_j in enumerate(f_read[ii:]):
-                                if line_j.find('</object>')!=-1:
+                            for jj,line_j in enumerate(combo_i[1].split('</')):
+                                if line_j.find('object>')!=-1:
                                     end_line=jj+ii
+                                    print('found label_k',label_k)
+                                    print('deleting bounding box')
+                                    print('xmin',xmin)
+                                    print('xmax',xmax)
+                                    print('ymin',ymin)
+                                    print('ymax',ymax)
                             f_new.append(line)
                         else:
                             f_new.append(line)
+                        #else:
+                        #    f_new.append(line)
                     else:
                         f_new.append(line)
-                f_new=f_new[:start_line]+f_new[end_line+1:]
-                if f_new[0].find('annotation')==-1:
-                    f_old=f_new
-                    f_new=[]
-                    f_new.append('<annotation>\n')
-                    f_new=f_new+f_old
-                    print('fixed that before it forgot the first part')
+                if end_line!=0:
+                    f_new=f_new[:start_line]+f_new[end_line+1:]
+
+                try:
+                    f_new[0].find('annotation')!=-1
+                except:
+                    pprint(f_read)
+                    assert f_new[0].find('annotation')!=-1
+                # f_new=f_new[:start_line]+f_new[end_line+1:]
+                # if f_new[0].find('annotation')==-1:
+                #     f_old=f_new
+                #     f_new=[]
+                #     f_new.append('<annotation>\n')
+                #     f_new=f_new+f_old
+                #     print('fixed that before it forgot the first part')
                 f=open(path_anno_bad,'w')
                 [f.writelines(w) for w in f_new]
                 f.close()  
@@ -2307,23 +2512,57 @@ class MOSAIC:
                 end_line=0
                 self.df.drop(self.index_bad,axis=0)
                 self.df=self.df.drop(self.index_bad,axis=0)
+                # for ii,line in enumerate(f_read):
+                #     if line.find(label_k)!=-1:
+                #         print('found label_k',label_k)
+                #         combo_i=f_read[ii-1:]
+                #         combo_i="".join([w for w in combo_i])
+                #         combo_i=combo_i.split('<object>')
+                #         if combo_i[1].find(xmin)!=-1 and combo_i[1].find(xmax)!=-1 and combo_i[1].find(ymin)!=-1 and combo_i[1].find(ymax)!=-1:
+                #             start_line=ii-1
+                #             for jj,line_j in enumerate(f_read[ii:]):
+                #                 if line_j.find('</object>')!=-1:
+                #                     end_line=jj+ii
+                #             f_new.append(line)
+                #         else:
+                #             f_new.append(line)
+                #     else:
+                #         f_new.append(line)
+                # f_new=f_new[:start_line]+f_new[end_line+1:]
+
                 for ii,line in enumerate(f_read):
-                    if line.find(label_k)!=-1:
-                        print('found label_k',label_k)
+                    if line.find(label_k)!=-1:   
                         combo_i=f_read[ii-1:]
-                        combo_i="".join([w for w in combo_i])
+                        combo_i="".join([w.replace('\n','') for w in combo_i])
                         combo_i=combo_i.split('<object>')
+                        #print(len(combo_i),combo_i)
+                        #if len(combo_i)>1:
                         if combo_i[1].find(xmin)!=-1 and combo_i[1].find(xmax)!=-1 and combo_i[1].find(ymin)!=-1 and combo_i[1].find(ymax)!=-1:
                             start_line=ii-1
-                            for jj,line_j in enumerate(f_read[ii:]):
-                                if line_j.find('</object>')!=-1:
+                            for jj,line_j in enumerate(combo_i[1].split('</')):
+                                if line_j.find('object>')!=-1:
                                     end_line=jj+ii
+                                    print('found label_k',label_k)
+                                    print('deleting bounding box')
+                                    print('xmin',xmin)
+                                    print('xmax',xmax)
+                                    print('ymin',ymin)
+                                    print('ymax',ymax)
                             f_new.append(line)
                         else:
                             f_new.append(line)
+                        #else:
+                        #    f_new.append(line)
                     else:
                         f_new.append(line)
-                f_new=f_new[:start_line]+f_new[end_line+1:]
+                if end_line!=0:
+                    f_new=f_new[:start_line]+f_new[end_line+1:]
+
+                try:
+                    f_new[0].find('annotation')!=-1
+                except:
+                    pprint(f_read)
+                    assert f_new[0].find('annotation')!=-1
                 f=open(path_anno_bad,'w')
                 [f.writelines(w) for w in f_new]
                 f.close()  
