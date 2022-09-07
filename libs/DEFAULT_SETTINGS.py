@@ -20,3 +20,4 @@ root_fg='#b7f731'#'lime'
 canvas_columnspan=50
 canvas_rowspan=50
 useSSIM=False #use structural similarity for comparisons with MOSAICs
+difficult_keyword='difficult'
