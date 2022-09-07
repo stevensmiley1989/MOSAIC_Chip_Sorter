@@ -145,6 +145,7 @@ from sklearn.preprocessing import StandardScaler
 import seaborn as sns
 import umap 
 from pprint import pprint
+import random
 import cv2
 try:
     from libs import SAVED_SETTINGS as DEFAULT_SETTINGS
@@ -483,57 +484,67 @@ class popupWindow_BLACKPATCHES(object):
                 self.img_i[ymin:ymax,xmin:xmax]=0.
             cv2.imwrite(path_jpeg_i,self.img_i)
 
-            #try:
+            try:
             
-            xmin=str(xmin)
-            ymin=str(ymin)
-            xmax=str(xmax)
-            ymax=str(ymax)
+                xmin=str(xmin)
+                ymin=str(ymin)
+                xmax=str(xmax)
+                ymax=str(ymax)
 
-            label_k=self.df['label_i'][self.index_bad]
-            path_anno_bad=self.df['path_anno_i'][self.index_bad]
+                label_k=self.df['label_i'][self.index_bad]
+                path_anno_bad=self.df['path_anno_i'][self.index_bad]
 
-            assert path_jpeg_i==self.df['path_jpeg_i'][self.index_bad]
-            f=open(path_anno_bad,'r')
-            f_read=f.readlines()
-            f.close()
-            f_new=[]
-            start_line=0
-            end_line=0
+                assert path_jpeg_i==self.df['path_jpeg_i'][self.index_bad]
+                f=open(path_anno_bad,'r')
+                f_read=f.readlines()
+                f.close()
+                f_new=[]
+                start_line=0
+                end_line=0
 
-            self.bad_index_list.append(self.index_bad)
-            for ii,line in enumerate(f_read):
-                if line.find(label_k)!=-1:   
-                    combo_i=f_read[ii-1:]
-                    combo_i="".join([w for w in combo_i])
-                    combo_i=combo_i.split('<object>')
-                    #print(len(combo_i),combo_i)
-                    if len(combo_i)>1:
-                        if combo_i[1].find(xmin)!=-1 and combo_i[1].find(xmax)!=-1 and combo_i[1].find(ymin)!=-1 and combo_i[1].find(ymax)!=-1:
-                            start_line=ii-1
-                            for jj,line_j in enumerate(f_read[ii:]):
-                                if line_j.find('</object>')!=-1:
-                                    end_line=jj+ii
-                                    print('found label_k',label_k)
-                                    print('deleting bounding box')
-                                    print('xmin',xmin)
-                                    print('xmax',xmax)
-                                    print('ymin',ymin)
-                                    print('ymax',ymax)
-                            f_new.append(line)
+                self.bad_index_list.append(self.index_bad)
+                for ii,line in enumerate(f_read):
+                    if line.find(label_k)!=-1:   
+                        combo_i=f_read[ii-1:]
+                        combo_i="".join([w.replace('\n','') for w in combo_i])
+                        combo_i=combo_i.split('<object>')
+
+                        #print(len(combo_i),combo_i)
+                        if len(combo_i)>1:
+                            if combo_i[1].find(xmin)!=-1 and combo_i[1].find(xmax)!=-1 and combo_i[1].find(ymin)!=-1 and combo_i[1].find(ymax)!=-1:
+                                start_line=ii-1
+                                #for jj,line_j in enumerate(f_read[ii:]):
+                                for jj,line_j in enumerate(combo_i[1].split('</')):
+                                    if line_j.find('object>')!=-1:
+                                        end_line=jj+ii
+                                        print('found label_k',label_k)
+                                        print('deleting bounding box')
+                                        print('xmin',xmin)
+                                        print('xmax',xmax)
+                                        print('ymin',ymin)
+                                        print('ymax',ymax)
+                                f_new.append(line)
+                            else:
+                                f_new.append(line)
                         else:
                             f_new.append(line)
                     else:
                         f_new.append(line)
-                else:
-                    f_new.append(line)
-            f_new=f_new[:start_line]+f_new[end_line+1:]
-            f=open(path_anno_bad,'w')
-            [f.writelines(w) for w in f_new]
-            f.close()  
+                if end_line!=0:
 
-            #except:
-                #print('This ship has sailed, item not found.')
+                    f_new=f_new[:start_line]+f_new[end_line+1:]
+                    try:
+                        f_new[0].find('annotation')!=-1
+                    except:
+                        pprint(f_read)
+                        assert f_new[0].find('annotation')!=-1
+                #f_new=f_new[:start_line]+f_new[end_line+1:]
+                f=open(path_anno_bad,'w')
+                [f.writelines(w) for w in f_new]
+                f.close()  
+
+            except:
+                print('This ship has sailed, item not found.')
         print('cleaning  up the dataframe')
         for bad_index in tqdm(self.bad_index_list):
             self.df=self.df.drop(bad_index,axis=0)
@@ -543,7 +554,159 @@ class popupWindow_BLACKPATCHES(object):
         self.value=self.df
         self.top.destroy()
     def cleanup_no(self):
-        KEEPCLASS_LIST=[]
+        self.value=self.df
+        self.top.destroy()
+class popupWindow_FAKEPATCHES(object):
+    def __init__(self,master,df,df_filename,df_filename_csv):
+        self.top=tk.Toplevel(master)
+        self.top.geometry( "{}x{}".format(ROOT_W//2,ROOT_H//2) )
+        self.top.configure(background = 'black')
+        self.l=Button(self.top,text="Submit",command=self.cleanup_yes,bg=DEFAULT_SETTINGS.root_fg, fg=DEFAULT_SETTINGS.root_bg)
+        self.l.grid(row=1,column=1,sticky='se')
+        self.e=Button(self.top,text="Cancel",command=self.cleanup_no,bg=DEFAULT_SETTINGS.root_fg, fg=DEFAULT_SETTINGS.root_bg)
+        self.e.grid(row=1,column=2,sticky='sw')
+        self.style4=ttk.Style()
+        self.style4.configure('Normal.TCheckbutton',
+                             background='green',
+                             foreground='black')
+        self.checkm_vars={}
+        self.checkm_buttons={}
+        self.new_df=df.copy()
+        self.df=df.copy()
+        self.df_filename=df_filename
+        self.df_filename_csv=df_filename_csv
+        unique_labels=self.new_df['label_i'].unique()
+
+        for i,label in enumerate(unique_labels):
+            self.checkm_vars[label]=tk.IntVar()
+            self.checkm_vars[label].set(1)
+            self.checkm_buttons[label]=ttk.Checkbutton(self.top, style='Normal.TCheckbutton',text=label,variable=self.checkm_vars[label],onvalue=1, offvalue=0)
+            self.checkm_buttons[label].grid(row=i+1,column=3,sticky='sw')     
+
+
+    def cleanup_yes(self):
+        FAKEPATCHES_LIST=[]
+        path_background='FAKE_BACKGROUNDS'
+        if os.path.exists(path_background):
+            possible_fake_backgrounds=os.listdir(path_background)
+            if len(possible_fake_backgrounds)>0:
+                possible_fake_backgrounds=[os.path.join(path_background,w) for w in possible_fake_backgrounds if os.path.isfile(os.path.join(path_background,w)) and w.find('.jpg')!=-1]
+                if len(possible_fake_backgrounds)>0:
+                    for label_i,value_i in self.checkm_vars.items():
+                        if value_i.get()==1:
+                            FAKEPATCHES_LIST.append(label_i)
+                    self.new_df=self.new_df[self.new_df['label_i'].isin(FAKEPATCHES_LIST)]
+                    
+                    for row in tqdm(range(len(self.new_df))):
+                        path_background_i=random.choice(possible_fake_backgrounds)
+                        print('path_background_i',path_background_i)
+                        path_jpeg_i=self.new_df['path_jpeg_i'].iloc[row]
+                        xmin=self.new_df['xmin'].iloc[row]
+                        xmax=self.new_df['xmax'].iloc[row]
+                        ymin=self.new_df['ymin'].iloc[row]
+                        ymax=self.new_df['ymax'].iloc[row]
+                        self.img_i=cv2.imread(path_jpeg_i)
+                        self.img_i_H=self.img_i.shape[1]
+                        self.img_i_W=self.img_i.shape[0]
+                        self.img_fake=cv2.imread(path_background_i)
+                        self.img_fake=cv2.resize(self.img_fake,(self.img_i_H,self.img_i_W))
+                        if len(self.img_i.shape)==3:
+                            self.img_fake[ymin:ymax,xmin:xmax,:]=self.img_i[ymin:ymax,xmin:xmax,:]
+                        else:
+                            self.img_fake[ymin:ymax,xmin:xmax]=self.img_i[ymin:ymax,xmin:xmax]
+                        cv2.imwrite(path_jpeg_i,self.img_fake)
+                    self.bad_index_list=[]
+                    for row in tqdm(range(len(self.df))):
+                        self.index_bad=self.df.iloc[row].name
+                        path_jpeg_i=self.df['path_jpeg_i'].iloc[row]
+                        list_of_acceptable_jpegs=list(self.new_df['path_jpeg_i'].unique())
+                        label_k=self.df['label_i'][self.index_bad]
+                        if path_jpeg_i not in list_of_acceptable_jpegs:
+                            os.remove(path_jpeg_i)
+                            self.bad_index_list.append(self.index_bad)
+                            path_anno_bad=self.df['path_anno_i'][self.index_bad]
+                            os.remove(path_anno_bad)
+                        elif label_k in FAKEPATCHES_LIST:
+                            pass
+                        else:
+                            xmin=self.df['xmin'].iloc[row]
+                            xmax=self.df['xmax'].iloc[row]
+                            ymin=self.df['ymin'].iloc[row]
+                            ymax=self.df['ymax'].iloc[row]
+
+                            #try:
+                            
+                            xmin=str(xmin)
+                            ymin=str(ymin)
+                            xmax=str(xmax)
+                            ymax=str(ymax)
+
+                            
+                            path_anno_bad=self.df['path_anno_i'][self.index_bad]
+
+                            assert path_jpeg_i==self.df['path_jpeg_i'][self.index_bad]
+                            if os.path.exists(path_anno_bad):
+                                f=open(path_anno_bad,'r')
+                                f_read=f.readlines()
+                                f.close()
+                                try:
+                                    f_read[0].find('annotation')!=-1
+                                except:
+                                    pprint(f_read)
+                                    assert f_read[0].find('annotation')!=-1
+                                f_new=[]
+                                start_line=0
+                                end_line=0
+
+                                self.bad_index_list.append(self.index_bad)
+                                for ii,line in enumerate(f_read):
+                                    if line.find(label_k)!=-1:   
+                                        combo_i=f_read[ii-1:]
+                                        combo_i="".join([w.replace('\n','') for w in combo_i])
+                                        combo_i=combo_i.split('<object>')
+                                        #print(len(combo_i),combo_i)
+                                        #if len(combo_i)>1:
+                                        if combo_i[1].find(xmin)!=-1 and combo_i[1].find(xmax)!=-1 and combo_i[1].find(ymin)!=-1 and combo_i[1].find(ymax)!=-1:
+                                            start_line=ii-1
+                                            for jj,line_j in enumerate(combo_i[1].split('</')):
+                                                if line_j.find('object>')!=-1:
+                                                    end_line=jj+ii
+                                                    print('found label_k',label_k)
+                                                    print('deleting bounding box')
+                                                    print('xmin',xmin)
+                                                    print('xmax',xmax)
+                                                    print('ymin',ymin)
+                                                    print('ymax',ymax)
+                                            f_new.append(line)
+                                        else:
+                                            f_new.append(line)
+                                        #else:
+                                        #    f_new.append(line)
+                                    else:
+                                        f_new.append(line)
+                                if end_line!=0:
+                                    f_new=f_new[:start_line]+f_new[end_line+1:]
+
+                                try:
+                                    f_new[0].find('annotation')!=-1
+                                except:
+                                    pprint(f_read)
+                                    assert f_new[0].find('annotation')!=-1
+                                f=open(path_anno_bad,'w')
+                                [f.writelines(w) for w in f_new]
+                                f.close()
+
+                            #except:
+                            #    print('This ship has sailed, item not found.')
+                    print('cleaning  up the dataframe')
+                    for bad_index in tqdm(self.bad_index_list):
+                        self.df=self.df.drop(bad_index,axis=0)
+                    self.df=self.df.reset_index().drop('index',axis=1)
+                    self.df.to_pickle(self.df_filename)
+                    self.df.to_csv(self.df_filename_csv,index=None)
+        self.value=self.df
+        self.top.destroy()
+    def cleanup_no(self):
         self.value=self.df
         self.top.destroy()
 
@@ -790,6 +953,7 @@ class MOSAIC:
                     os.remove(blank)
             else:
                 print('no blank jpegs')
+
     def SHOWTABLE_BUTTONS(self):
         self.popup_SHOWTABLE_button=Button(root_tk,text='Show df',command=self.popupWindow_showtable,bg=DEFAULT_SETTINGS.root_fg,fg=DEFAULT_SETTINGS.root_bg)
         self.popup_SHOWTABLE_button.grid(row=8,column=2,sticky='sw')
@@ -837,6 +1001,14 @@ class MOSAIC:
     def popup_create_blackpatches(self):
         root_tk.title('Do you want to create black patches on these classes?')
         self.w=popupWindow_BLACKPATCHES(root_tk,self.df,self.df_filename,self.df_filename_csv)
+        root_tk.wait_window(self.w.top)
+        print(self.w.value)
+        root_tk.title("MOSAIC Chip Sorter")
+        return self.w.value
+
+    def popup_create_fakepatches(self):
+        root_tk.title('Do you want to create fake patches on these classes to random backgrounds in the FAKE_BACKGROUNDS directory?')
+        self.w=popupWindow_FAKEPATCHES(root_tk,self.df,self.df_filename,self.df_filename_csv)
         root_tk.wait_window(self.w.top)
         print(self.w.value)
         root_tk.title("MOSAIC Chip Sorter")
@@ -897,7 +1069,10 @@ class MOSAIC:
 
     def create_blackpatches(self):
         self.df=self.popup_create_blackpatches()
-        
+    
+    def create_fakepatches(self):
+        self.df=self.popup_create_fakepatches()
+
     def plot_dx_dy(self):
         if _platform!='darwin':
             plt.clf() #edit sjs 5/28/2022
@@ -3464,7 +3639,12 @@ class App:
         self.create_blackpatches_button=Button(self.root,image=self.icon_create,command=self.create_blackpatches,bg=self.root_bg,fg=self.root_fg)
         self.create_blackpatches_button.grid(row=13,column=32,sticky='se')
         self.create_blackpatches_note=tk.Label(self.root,text='20. \n Create Black Patches',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
-        self.create_blackpatches_note.grid(row=14,column=32,sticky='ne')    
+        self.create_blackpatches_note.grid(row=14,column=32,sticky='ne')   
+
+        self.create_fakepatches_button=Button(self.root,image=self.icon_create,command=self.create_fakepatches,bg=self.root_bg,fg=self.root_fg)
+        self.create_fakepatches_button.grid(row=17,column=32,sticky='se')
+        self.create_fakepatches_note=tk.Label(self.root,text='21. \n Create New Dataset \n with Random Backgrounds',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.create_fakepatches_note.grid(row=18,column=32,sticky='ne') 
 
     def checkbutton_blanks(self):
         self.BLANK_boolean_var = tk.BooleanVar()
@@ -3549,6 +3729,10 @@ class App:
         self.update_counts('na')
     def create_blackpatches(self):
         self.MOSAIC.create_blackpatches()
+        self.load_df()
+        self.update_counts('na')
+    def create_fakepatches(self):
+        self.MOSAIC.create_fakepatches()
         self.load_df()
         self.update_counts('na')
     def look_at_objects(self):
