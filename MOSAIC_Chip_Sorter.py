@@ -1619,7 +1619,7 @@ class MOSAIC:
         from multiprocessing import Process,Queue
 
         if multiprocessing.cpu_count()>1:
-            NUM_PROCESS=multiprocessing.cpu_count()-2
+            NUM_PROCESS=multiprocessing.cpu_count()-1
         else:
             NUM_PROCESS=1
         i=0
