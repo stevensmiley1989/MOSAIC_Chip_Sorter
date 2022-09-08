@@ -530,7 +530,7 @@ class popupWindow_BLACKPATCHES(object):
                 for ii,line in enumerate(f_read):
                     if line.find(label_k)!=-1:   
                         combo_i=f_read[ii-1:]
-                        combo_i="".join([w.replace('\n','') for w in combo_i])
+                        combo_i="".join([w.replace('\n','').replace('/>','</') for w in combo_i])
                         combo_i=combo_i.split('<object>')
 
                         #print(len(combo_i),combo_i)
@@ -688,7 +688,7 @@ class popupWindow_FAKEPATCHES(object):
                                 for ii,line in enumerate(f_read):
                                     if line.find(label_k)!=-1:   
                                         combo_i=f_read[ii-1:]
-                                        combo_i="".join([w.replace('\n','') for w in combo_i])
+                                        combo_i="".join([w.replace('\n','').replace('/>','</') for w in combo_i])
                                         combo_i=combo_i.split('<object>')
                                         #print(len(combo_i),combo_i)
                                         #if len(combo_i)>1:
@@ -1186,7 +1186,7 @@ class MOSAIC:
                     for ii,line in enumerate(f_read):
                         if line.find(label_k)!=-1:   
                             combo_i=f_read[ii-1:]
-                            combo_i="".join([w.replace('\n','') for w in combo_i])
+                            combo_i="".join([w.replace('\n','').replace('/>','</') for w in combo_i])
                             combo_i=combo_i.split('<object>')
                             #print(len(combo_i),combo_i)
                             #if len(combo_i)>1:
@@ -1537,52 +1537,74 @@ class MOSAIC:
                 i+=1
         self.df.to_pickle(self.df_filename)
         self.df.to_csv(self.df_filename_csv,index=None)
-    def speed_df(self,path_anno_i,path_jpeg_i,df_queue_i):
+    def speed_df(self,path_annos,path_jpegs,df_queue_i):
         df=df_queue_i.get()
         i=0
-        parser = etree.XMLParser(encoding=self.ENCODE_METHOD)
-        try:
-            xmltree = ElementTree.parse(path_anno_i, parser=parser).getroot()
-        except:
-            print(path_anno_i)
-            f=open(path_anno_i,'r')
-            f_read=f.readlines()
-            f.close()
-            f_new=[]
-            if f_read[0].find('annotation')==-1:
-                f_new.append('<annotation>\n')
-                for line in f_read:
-                    f_new.append(line)
-                f=open(path_anno_i,'w')
-                [f.writelines(w) for w in f_new]
-                f.close()
-            xmltree = ElementTree.parse(path_anno_i, parser=parser).getroot()
-        filename = xmltree.find('filename').text
-        width_i=xmltree.find('size').find('width').text
-        height_i=xmltree.find('size').find('height').text
+        print('started j = 0')
+        for j,(path_anno_i,path_jpeg_i) in enumerate(tqdm(zip(path_annos,path_jpegs))):
 
-        for object_iter in xmltree.findall('object'):
-            bndbox = object_iter.find("bndbox")
-            label = object_iter.find('name').text
-            xmin = bndbox.find('xmin').text
-            ymin = bndbox.find('ymin').text
-            xmax = bndbox.find('xmax').text
-            ymax = bndbox.find('ymax').text
+            parser = etree.XMLParser(encoding=self.ENCODE_METHOD)
+            #print(path_anno_i)
+            f=open(path_anno_i,'r')
+            f_read=f.read()
+            f.close()
+            if f_read.find('/>')!=-1:
+                f_read=f_read.splitlines()
+                f_new=[]
+                for line in f_read:
+                    if line.find('/>')==-1:
+                        f_new.append(line)
+                    else:
+                        print(f'bad line found for {line}')
+                if f_new!=f_read:
+                    f=open(path_anno_i,'w')
+                    [f.writelines(w) for w in f_new]
+                    f.close()
             try:
-                difficulty_i=object_iter.find(self.difficult_keyword).text
+                xmltree = ElementTree.parse(path_anno_i, parser=parser).getroot()
             except:
-                difficulty_i='0'
-            df.at[i,'xmin']=xmin
-            df.at[i,'xmax']=xmax
-            df.at[i,'ymin']=ymin
-            df.at[i,'ymax']=ymax
-            df.at[i,'width']=width_i
-            df.at[i,'height']=height_i
-            df.at[i,'label_i']=label
-            df.at[i,'path_jpeg_i']=path_jpeg_i
-            df.at[i,'path_anno_i']=path_anno_i
-            df.at[i,'difficulty']=difficulty_i
-            i+=1    
+                print(path_anno_i)
+                f=open(path_anno_i,'r')
+                f_read=f.readlines()
+                f.close()
+                f_new=[]
+                if f_read[0].find('annotation')==-1:
+                    f_new.append('<annotation>\n')
+                    for line in f_read:
+                        f_new.append(line)
+                    f=open(path_anno_i,'w')
+                    [f.writelines(w) for w in f_new]
+                    f.close()
+
+                    
+                xmltree = ElementTree.parse(path_anno_i, parser=parser).getroot()
+            filename = xmltree.find('filename').text
+            width_i=xmltree.find('size').find('width').text
+            height_i=xmltree.find('size').find('height').text
+
+            for object_iter in xmltree.findall('object'):
+                bndbox = object_iter.find("bndbox")
+                label = object_iter.find('name').text
+                xmin = bndbox.find('xmin').text
+                ymin = bndbox.find('ymin').text
+                xmax = bndbox.find('xmax').text
+                ymax = bndbox.find('ymax').text
+                try:
+                    difficulty_i=object_iter.find(self.difficult_keyword).text
+                except:
+                    difficulty_i='0'
+                df.at[i,'xmin']=xmin
+                df.at[i,'xmax']=xmax
+                df.at[i,'ymin']=ymin
+                df.at[i,'ymax']=ymax
+                df.at[i,'width']=width_i
+                df.at[i,'height']=height_i
+                df.at[i,'label_i']=label
+                df.at[i,'path_jpeg_i']=path_jpeg_i
+                df.at[i,'path_anno_i']=path_anno_i
+                df.at[i,'difficulty']=difficulty_i
+                i+=1    
+        print(f'finished j = {j}')
         df_queue_i.put(df)    
 
     def create_df(self):
@@ -1597,44 +1619,70 @@ class MOSAIC:
         from multiprocessing import Process,Queue
 
         if multiprocessing.cpu_count()>1:
-            NUM_PROCESS=multiprocessing.cpu_count()-1
+            NUM_PROCESS=multiprocessing.cpu_count()-2
         else:
             NUM_PROCESS=1
         i=0
-        processes=[]
+        processes={}
         df_queues={}
-        for j,(path_anno_i,path_jpeg_i) in tqdm(enumerate(zip(self.Annotations,self.JPEGs))):
+        path_annos=[]
+        path_jpegs=[]
+        df_anno_jpg=pd.DataFrame(zip(self.Annotations,self.JPEGs),columns=['Annotations','JPEGs'])
+        expected_count=len(list(df_anno_jpg['JPEGs'].unique()))
+        print('expected_count=',expected_count)
+        CHUNK_NUM=501
+        time_start=time.time()
+        #for j,(path_anno_i,path_jpeg_i) in tqdm(enumerate(zip(self.Annotations,self.JPEGs))):
+        for j in range(0,len(df_anno_jpg),CHUNK_NUM):
+            print('j=',j)
+            print('len(processes)=',len(processes))
+            path_annos=df_anno_jpg['Annotations'].loc[j:j+CHUNK_NUM]
+            path_jpegs=df_anno_jpg['JPEGs'].loc[j:j+CHUNK_NUM]
             df_queues[len(processes)]=Queue()
             df_queues[len(processes)].put(self.df.copy())
-            p=Process(target=self.speed_df,args=(path_anno_i,path_jpeg_i,df_queues[len(processes)]))
-            processes.append(p)
+            p=Process(target=self.speed_df,args=(path_annos,path_jpegs,df_queues[len(processes)]))
+            PROCESS_COUNT=len(processes)
+            processes[PROCESS_COUNT]=p
             p.start()
-            if (j%NUM_PROCESS==0 and j!=0):
-                print('\Finished Reading {} Annotations of {} \n'.format(j,len(self.Annotations)))
-                for process_i in processes:
-                    process_i.join()
-                for queue_i in df_queues.values():
+            if (j%NUM_PROCESS==0 and j!=0 or j+CHUNK_NUM>expected_count):
+                print('\Finished Reading {} Annotations of {} \n'.format(path_annos,len(df_anno_jpg)))
+                for (p_i,process_i),queue_i in zip(processes.items(),df_queues.values()):
+
+                #for queue_i in df_queues.values():
                     if i==0:
+                        print(f'getting queue_i for i={i}')
                         self.df_tmp=queue_i.get()
                         i+=1
                     else:
+                        print(f'getting queue_i for i={i}')
                         self.df_tmp=pd.concat([self.df_tmp,queue_i.get()],ignore_index=True)
+                    print(f'joining process loop {p_i}')
+                    process_i.join()
+                    print('joined')
                 df_queues={}
-                processes=[]
+                processes={}
+            if j+CHUNK_NUM>expected_count:
+                print('kicking out')
+                break
         try:
-            for process_i in processes:
+            for process_i in processes.values():
+                print('joining process loop 2')
                 process_i.join()
             for queue_i in df_queues.values():
-                if i==0:
+                if i==0 and queue_i.empty()==False:
                     self.df_tmp=queue_i.get()
                     i+=1
-                else:
+                elif queue_i.empty()==False:
                     self.df_tmp=pd.concat([self.df_tmp,queue_i.get()],ignore_index=True)
         except:
             pass
         self.df=self.df_tmp.copy()
         self.df.to_pickle(self.df_filename)
         self.df.to_csv(self.df_filename_csv,index=None)
+        count_of_jpegs=len(list(self.df['path_jpeg_i'].unique()))
+        print(f'length of df unique jpegs is = {count_of_jpegs}')
+        print(f"expected count is = {expected_count}")
+        print(f'This took {time.time()-time_start} seconds')
     # def create_df(self):
     #     self.Annotations_list=list(os.listdir(self.path_Annotations))
     #     self.JPEGs_list=list(os.listdir(self.path_JPEGImages))
@@ -1928,7 +1976,7 @@ class MOSAIC:
                             for ii,line in enumerate(f_read):
                                 if line.find(label_k)!=-1:   
                                     combo_i=f_read[ii-1:]
-                                    combo_i="".join([w.replace('\n','') for w in combo_i])
+                                    combo_i="".join([w.replace('\n','').replace('/>','</') for w in combo_i])
                                     combo_i=combo_i.split('<object>')
                                     #print(len(combo_i),combo_i)
                                     #if len(combo_i)>1:
@@ -1943,6 +1991,7 @@ class MOSAIC:
                                                 print('xmax',xmax)
                                                 print('ymin',ymin)
                                                 print('ymax',ymax)
+                                           
                                         f_new.append(line)
                                     else:
                                         f_new.append(line)
@@ -2281,6 +2330,88 @@ class MOSAIC:
             self.k=0
             self.run_selection=self.look_at_selection()
             #self.inspect_mosaic=False
+        if event.key=='z':
+
+            if 'umap_input' in self.df.columns:
+                self.df_sample=self.df.drop(['umap_input'],axis=1).copy()
+            else:
+                self.df_sample=self.df.copy()
+            self.eymin=min(self.ey2,self.ey)
+            self.eymax=max(self.ey2,self.ey)
+            self.exmin=min(self.ex2,self.ex)
+            self.exmax=max(self.ex2,self.ex)
+            self.df_sample=self.df_sample[(self.df_sample['DX']>self.exmin) & (self.df_sample['DX']<self.exmax) & (self.df_sample['DY']>self.eymin) & (self.df_sample['DY']<self.eymax)]
+            print('Total number in this region is: {} \n'.format(len(self.df_sample)))
+            self.a_xmin, self.a_xmax, self.a_ymin, self.a_ymax = plt.axis()
+            print(self.a_xmin, self.a_xmax, self.a_ymin, self.a_ymax)
+            for row in list(self.df_sample.index):
+                self.index_bad=row
+                try:
+                    print('deleting bounding box')
+                    xmin=str(self.df['xmin'][self.index_bad])
+                    xmax=str(self.df['xmax'][self.index_bad])
+                    ymin=str(self.df['ymin'][self.index_bad])
+                    ymax=str(self.df['ymax'][self.index_bad])
+                    print('xmin',xmin)
+                    print('xmax',xmax)
+                    print('ymin',ymin)
+                    print('ymax',ymax)
+                    label_k=self.df['label_i'][self.index_bad]
+                    path_anno_bad=self.df['path_anno_i'][self.index_bad]
+                    f=open(path_anno_bad,'r')
+                    f_read=f.readlines()
+                    f.close()
+                    f_new=[]
+                    start_line=0
+                    end_line=0
+                    self.df.drop(self.index_bad,axis=0)
+                    self.df=self.df.drop(self.index_bad,axis=0)
+
+
+                    for ii,line in enumerate(f_read):
+                        if line.find(label_k)!=-1:   
+                            combo_i=f_read[ii-1:]
+                            combo_i="".join([w.replace('\n','').replace('/>','</') for w in combo_i])
+                            combo_i=combo_i.split('<object>')
+                            #print(len(combo_i),combo_i)
+                            #if len(combo_i)>1:
+                            if combo_i[1].find(xmin)!=-1 and combo_i[1].find(xmax)!=-1 and combo_i[1].find(ymin)!=-1 and combo_i[1].find(ymax)!=-1:
+                                start_line=ii-1
+                                for jj,line_j in enumerate(combo_i[1].split('</')):
+                                    if line_j.find('object>')!=-1:
+                                        end_line=jj+ii
+                                        print('found label_k',label_k)
+                                        print('deleting bounding box')
+                                        print('xmin',xmin)
+                                        print('xmax',xmax)
+                                        print('ymin',ymin)
+                                        print('ymax',ymax)
+                                f_new.append(line)
+                            else:
+                                f_new.append(line)
+                            #else:
+                            #    f_new.append(line)
+                        else:
+                            f_new.append(line)
+                    if end_line!=0:
+                        f_new=f_new[:start_line]+f_new[end_line+1:]
+
+                    try:
+                        f_new[0].find('annotation')!=-1
+                    except:
+                        pprint(f_read)
+                        assert f_new[0].find('annotation')!=-1
+                    f=open(path_anno_bad,'w')
+                    [f.writelines(w) for w in f_new]
+                    f.close()  
+                    self.df.to_pickle(self.df_filename)
+                    self.df.to_csv(self.df_filename_csv,index=None)
+                    try:
+                        cv2.destroyAllWindows()
+                    except:
+                        pass 
+                except:
+                    print('This ship has sailed, item not found.')
         if event.key=='d':
             try:
                 print('deleting bounding box')
@@ -2322,7 +2453,7 @@ class MOSAIC:
                 for ii,line in enumerate(f_read):
                     if line.find(label_k)!=-1:   
                         combo_i=f_read[ii-1:]
-                        combo_i="".join([w.replace('\n','') for w in combo_i])
+                        combo_i="".join([w.replace('\n','').replace('/>','</') for w in combo_i])
                         combo_i=combo_i.split('<object>')
                         #print(len(combo_i),combo_i)
                         #if len(combo_i)>1:
@@ -2489,6 +2620,104 @@ class MOSAIC:
             self.rev_label_dic={v:k for k,v in self.label_dic.items()}
             self.draw_umap()
 
+        if event.key=='z':
+
+            if 'umap_input' in self.df.columns:
+                self.df_sample=self.df.drop(['umap_input'],axis=1).copy()
+            else:
+                self.df_sample=self.df.copy()
+            self.eymin=min(self.ey2,self.ey)
+            self.eymax=max(self.ey2,self.ey)
+            self.exmin=min(self.ex2,self.ex)
+            self.exmax=max(self.ex2,self.ex)
+            self.df_sample=self.df_sample[(self.df_sample['emb_X']>self.exmin) & (self.df_sample['emb_X']<self.exmax) & (self.df_sample['emb_Y']>self.eymin) & (self.df_sample['emb_Y']<self.eymax)]
+            print('Total number in this region is: {} \n'.format(len(self.df_sample)))
+            self.a_xmin, self.a_xmax, self.a_ymin, self.a_ymax = plt.axis()
+            print(self.a_xmin, self.a_xmax, self.a_ymin, self.a_ymax)
+            for row in list(self.df_sample.index):
+                self.index_bad=row
+                try:
+                    print('deleting bounding box')
+                    xmin=str(self.df['xmin'][self.index_bad])
+                    xmax=str(self.df['xmax'][self.index_bad])
+                    ymin=str(self.df['ymin'][self.index_bad])
+                    ymax=str(self.df['ymax'][self.index_bad])
+                    print('xmin',xmin)
+                    print('xmax',xmax)
+                    print('ymin',ymin)
+                    print('ymax',ymax)
+                    label_k=self.df['label_i'][self.index_bad]
+                    path_anno_bad=self.df['path_anno_i'][self.index_bad]
+                    f=open(path_anno_bad,'r')
+                    f_read=f.readlines()
+                    f.close()
+                    f_new=[]
+                    start_line=0
+                    end_line=0
+                    self.df.drop(self.index_bad,axis=0)
+                    self.df=self.df.drop(self.index_bad,axis=0)
+                    # for ii,line in enumerate(f_read):
+                    #     if line.find(label_k)!=-1:
+                    #         print('found label_k',label_k)
+                    #         combo_i=f_read[ii-1:]
+                    #         combo_i="".join([w for w in combo_i])
+                    #         combo_i=combo_i.split('<object>')
+                    #         if combo_i[1].find(xmin)!=-1 and combo_i[1].find(xmax)!=-1 and combo_i[1].find(ymin)!=-1 and combo_i[1].find(ymax)!=-1:
+                    #             start_line=ii-1
+                    #             for jj,line_j in enumerate(f_read[ii:]):
+                    #                 if line_j.find('</object>')!=-1:
+                    #                     end_line=jj+ii
+                    #             f_new.append(line)
+                    #         else:
+                    #             f_new.append(line)
+                    #     else:
+                    #         f_new.append(line)
+                    # f_new=f_new[:start_line]+f_new[end_line+1:]
+
+                    for ii,line in enumerate(f_read):
+                        if line.find(label_k)!=-1:   
+                            combo_i=f_read[ii-1:]
+                            combo_i="".join([w.replace('\n','') for w in combo_i])
+                            combo_i=combo_i.split('<object>')
+                            #print(len(combo_i),combo_i)
+                            #if len(combo_i)>1:
+                            if combo_i[1].find(xmin)!=-1 and combo_i[1].find(xmax)!=-1 and combo_i[1].find(ymin)!=-1 and combo_i[1].find(ymax)!=-1:
+                                start_line=ii-1
+                                for jj,line_j in enumerate(combo_i[1].split('</')):
+                                    if line_j.find('object>')!=-1:
+                                        end_line=jj+ii
+                                        print('found label_k',label_k)
+                                        print('deleting bounding box')
+                                        print('xmin',xmin)
+                                        print('xmax',xmax)
+                                        print('ymin',ymin)
+                                        print('ymax',ymax)
+                                f_new.append(line)
+                            else:
+                                f_new.append(line)
+                            #else:
+                            #    f_new.append(line)
+                        else:
+                            f_new.append(line)
+                    if end_line!=0:
+                        f_new=f_new[:start_line]+f_new[end_line+1:]
+
+                    try:
+                        f_new[0].find('annotation')!=-1
+                    except:
+                        pprint(f_read)
+                        assert f_new[0].find('annotation')!=-1
+                    f=open(path_anno_bad,'w')
+                    [f.writelines(w) for w in f_new]
+                    f.close()  
+                    self.df.to_pickle(self.df_filename)
+                    self.df.to_csv(self.df_filename_csv,index=None)
+                    try:
+                        cv2.destroyAllWindows()
+                    except:
+                        pass 
+                except:
+                    print('This ship has sailed, item not found.')
 
 
         if event.key=='d':
@@ -2533,7 +2762,7 @@ class MOSAIC:
                 for ii,line in enumerate(f_read):
                     if line.find(label_k)!=-1:   
                         combo_i=f_read[ii-1:]
-                        combo_i="".join([w.replace('\n','') for w in combo_i])
+                        combo_i="".join([w.replace('\n','').replace('/>','</') for w in combo_i])
                         combo_i=combo_i.split('<object>')
                         #print(len(combo_i),combo_i)
                         #if len(combo_i)>1:
@@ -3055,6 +3284,11 @@ class MOSAIC:
                 text_labels+='Press "t" and select "{}" to change label to "{}"\n'.format(int_i,label_j)
         plt.xlabel(text_labels)
         plt.scatter(self.df['emb_X'],self.df['emb_Y'],c=self.df['label_i_int'],cmap='Spectral',s=5)
+        self.df['difficulty']=[str(w).replace('\n','').strip(' ') for w in self.df['difficulty']]
+        if '1' in self.df['difficulty'].unique():
+            print('found some difficult stuff to plot')
+            self.df['difficulty']=[str(w).replace('\n','').strip(' ') for w in self.df['difficulty']]
+            plt.scatter(self.df[self.df['difficulty']=='1']['emb_X'],self.df[self.df['difficulty']=='1']['emb_Y'],c=self.df[self.df['difficulty']=='1']['label_i_int'],cmap='Spectral',s=20,facecolors='none', edgecolors='g',marker='o')
         self.ex=min(self.df['emb_X'])
         self.ex2=max(self.df['emb_X'])
         self.ey=min(self.df['emb_Y'])
