@@ -1630,7 +1630,7 @@ class MOSAIC:
         df_anno_jpg=pd.DataFrame(zip(self.Annotations,self.JPEGs),columns=['Annotations','JPEGs'])
         expected_count=len(list(df_anno_jpg['JPEGs'].unique()))
         print('expected_count=',expected_count)
-        CHUNK_NUM=501
+        CHUNK_NUM=125
         time_start=time.time()
         #for j,(path_anno_i,path_jpeg_i) in tqdm(enumerate(zip(self.Annotations,self.JPEGs))):
         for j in range(0,len(df_anno_jpg),CHUNK_NUM):
@@ -3283,12 +3283,14 @@ class MOSAIC:
             else:
                 text_labels+='Press "t" and select "{}" to change label to "{}"\n'.format(int_i,label_j)
         plt.xlabel(text_labels)
-        plt.scatter(self.df['emb_X'],self.df['emb_Y'],c=self.df['label_i_int'],cmap='Spectral',s=5)
+
         self.df['difficulty']=[str(w).replace('\n','').strip(' ') for w in self.df['difficulty']]
+
         if '1' in self.df['difficulty'].unique():
             print('found some difficult stuff to plot')
             self.df['difficulty']=[str(w).replace('\n','').strip(' ') for w in self.df['difficulty']]
-            plt.scatter(self.df[self.df['difficulty']=='1']['emb_X'],self.df[self.df['difficulty']=='1']['emb_Y'],c=self.df[self.df['difficulty']=='1']['label_i_int'],cmap='Spectral',s=20,facecolors='none', edgecolors='g',marker='o')
+            plt.scatter(self.df[self.df['difficulty']=='1']['emb_X'],self.df[self.df['difficulty']=='1']['emb_Y'],c=self.df[self.df['difficulty']=='1']['label_i_int'],cmap='Spectral',s=50,facecolors='none', edgecolors='g',marker='o')
+        plt.scatter(self.df['emb_X'],self.df['emb_Y'],c=self.df['label_i_int'],cmap='Spectral',s=5)
         self.ex=min(self.df['emb_X'])
         self.ex2=max(self.df['emb_X'])
         self.ey=min(self.df['emb_Y'])
@@ -3301,7 +3303,9 @@ class MOSAIC:
             plt.ylim([self.a_ymin,self.a_ymax])
         except:
             pass
-        if len(self.df['label_i_int'].unique())>1:
+        if (len(self.df['label_i_int'].unique())>1) & (('1' in self.df['difficulty'].unique())==False):
+            plt.colorbar(boundaries=np.arange(len(self.df['label_i_int'].unique())+1)-0.5).set_ticks(np.arange(len(self.df['label_i_int'].unique())))
+        elif ('1' in self.df['difficulty'].unique()):
             plt.colorbar(boundaries=np.arange(len(self.df['label_i_int'].unique())+1)-0.5).set_ticks(np.arange(len(self.df['label_i_int'].unique())))
         plt.tight_layout()
         plt.show()
