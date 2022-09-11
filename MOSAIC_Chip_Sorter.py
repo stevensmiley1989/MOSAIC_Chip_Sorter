@@ -639,6 +639,9 @@ class popupWindow_BLACKPATCHES(object):
                 f_new=[]
                 start_line=0
                 end_line=0
+                if len(f_read)==1:
+                    f_read=f_read[0].replace('><','>\n<')
+
 
                 self.bad_index_list.append(self.index_bad)
                 for ii,line in enumerate(f_read):
