@@ -275,14 +275,17 @@ def FIND_REPLACE_TARGETS(targets_dic,path_annotations):
 		for i,line in enumerate(f_read):
 			if line.find('<object>')!=-1:
 				start=True
-				name=f_read[i+1].split('<name>')[1].split('</name>')[0].replace('\n','').strip()
+				for j,line_j in enumerate(f_read[i:]):
+					if line_j.find('<name>')!=-1:
+						break
+				name=f_read[i+j].split('<name>')[1].split('</name>')[0].replace('\n','').strip()
 				name_og=name.strip()
 				if name in list(targets_dic.keys()):
 					name=targets_dic[name]
 				if name in list(targets_keep):
 					#print('BEFORE: \t',f_read[i+1])
 					keep=True
-					f_read[i+1]=f_read[i+1].replace(name_og.strip(),name.strip()) #find/replace label
+					f_read[i+j]=f_read[i+j].replace(name_og.strip(),name.strip()) #find/replace label
 					#print('AFTER: \t',f_read[i+1])
 				else:
 					keep=False
@@ -301,6 +304,117 @@ def FIND_REPLACE_TARGETS(targets_dic,path_annotations):
 		f=open(file_new,'w')
 		tmp=[f.writelines(w) for w in f_new]
 		f.close()
+class popupWindow_SETDIFFICULT(object):
+    def __init__(self,master,df,df_filename,df_filename_csv):
+        self.top=tk.Toplevel(master)
+        self.top.geometry( "{}x{}".format(ROOT_W//2,ROOT_H//2) )
+        self.top.configure(background = 'black')
+        self.l=Button(self.top,text="Submit",command=self.cleanup_yes,bg=DEFAULT_SETTINGS.root_fg, fg=DEFAULT_SETTINGS.root_bg)
+        self.l.grid(row=1,column=1,sticky='se')
+        self.e=Button(self.top,text="Cancel",command=self.cleanup_no,bg=DEFAULT_SETTINGS.root_fg, fg=DEFAULT_SETTINGS.root_bg)
+        self.e.grid(row=1,column=2,sticky='sw')
+        self.style4=ttk.Style()
+        self.style4.configure('Normal.TCheckbutton',
+                             background='green',
+                             foreground='black')
+        self.checkm_vars={}
+        self.checkm_buttons={}
+        self.new_df=df.copy()
+        self.df=df.copy()
+        self.df_filename=df_filename
+        self.df_filename_csv=df_filename_csv
+        unique_labels=self.new_df['label_i'].unique()
+
+        for i,label in enumerate(unique_labels):
+            self.checkm_vars[label]=tk.IntVar()
+            self.checkm_vars[label].set(1)
+            self.checkm_buttons[label]=ttk.Checkbutton(self.top, style='Normal.TCheckbutton',text=label,variable=self.checkm_vars[label],onvalue=1, offvalue=0)
+            self.checkm_buttons[label].grid(row=i+1,column=3,sticky='sw')     
+            
+    def cleanup_yes(self):
+        DIFFICULT_LIST=[]
+        for label_i,value_i in self.checkm_vars.items():
+            if value_i.get()==1:
+                DIFFICULT_LIST.append(label_i)
+        self.new_df=self.new_df[self.new_df['label_i'].isin(DIFFICULT_LIST)]
+        self.bad_index_list=[]
+        for row in tqdm(range(len(self.new_df))):
+            self.index_bad=self.new_df.iloc[row].name
+            path_jpeg_i=self.new_df['path_jpeg_i'].iloc[row]
+            xmin=self.new_df['xmin'].iloc[row]
+            xmax=self.new_df['xmax'].iloc[row]
+            ymin=self.new_df['ymin'].iloc[row]
+            ymax=self.new_df['ymax'].iloc[row]
+            difficult_i=self.new_df['difficulty'].iloc[row]
+            try:
+                xmin=str(xmin)
+                ymin=str(ymin)
+                xmax=str(xmax)
+                ymax=str(ymax)
+
+                label_k=self.df['label_i'][self.index_bad]
+                path_anno_bad=self.df['path_anno_i'][self.index_bad]
+
+                assert path_jpeg_i==self.df['path_jpeg_i'][self.index_bad]
+                f=open(path_anno_bad,'r')
+                f_read=f.readlines()
+                f.close()
+                f_new=[]
+
+
+
+                for ii,line in enumerate(f_read):
+                    if line.find(label_k)!=-1:   
+                        combo_i=f_read[ii-1:]
+                        combo_i="".join([w.replace('\n','').replace('/>','</') for w in combo_i])
+                        combo_i=combo_i.split('<object>')
+
+                        #print(len(combo_i),combo_i)
+                        if len(combo_i)>1:
+                            if combo_i[1].find(xmin)!=-1 and combo_i[1].find(xmax)!=-1 and combo_i[1].find(ymin)!=-1 and combo_i[1].find(ymax)!=-1:
+
+                                #for jj,line_j in enumerate(f_read[ii:]):
+                                for jj,line_j in enumerate(combo_i[1].split('</')):
+                                    if line_j.find('difficult')!=-1:
+                                        diff_line=jj+ii
+                                        print('FOUND YOU')
+                                        print(f_read[jj+ii])
+                                        print(line_j)
+                                        break
+                                f_new.append(line)
+                            else:
+                                f_new.append(line)
+                        else:
+                            f_new.append(line)
+                    else:
+                        f_new.append(line)
+
+                if f_new[diff_line].find('difficult')!=-1:
+                    f_new[diff_line]=f_new[diff_line].split('<difficult>')[0]+f'<difficult>{difficult_i}</difficult>'+f_new[diff_line].split('</difficult>')[1]
+                    print(f'UPDATED difficult_i to {difficult_i}')
+                try:
+                    f_new[0].find('annotation')!=-1
+                except:
+                    pprint(f_read)
+                    assert f_new[0].find('annotation')!=-1
+                #f_new=f_new[:start_line]+f_new[end_line+1:]
+                f=open(path_anno_bad,'w')
+                [f.writelines(w) for w in f_new]
+                f.close()  
+
+            except:
+                print('This ship has sailed, item not found.')
+
+        self.df=self.df.reset_index().drop('index',axis=1)
+        self.df.to_pickle(self.df_filename)
+        self.df.to_csv(self.df_filename_csv,index=None)
+        self.value=self.df
+        self.top.destroy()
+    def cleanup_no(self):
+        self.value=self.df
+        self.top.destroy()
+
+    
 class popupWindow(object):
     def __init__(self,master):
         self.top=tk.Toplevel(master)
@@ -933,6 +1047,9 @@ class MOSAIC:
         if 'difficulty' not in self.df.columns:
             self.df['difficulty']=self.df['label_i'].copy()
             self.df['difficulty']=['0' for w in self.df['difficulty']]
+        if 'make_new' not in self.df.columns:
+            self.df['make_new']=self.df['label_i'].copy()
+            self.df['make_new']=['0' for w in self.df['make_new']]
         self.unique_labels={w:i for i,w in enumerate(self.df['label_i'].unique())}
         self.clear_fix_bad()
         self.DX_MIN=min(self.df.DX)
@@ -955,7 +1072,74 @@ class MOSAIC:
         self.SHOWTABLE_BUTTONS()
         self.df.to_pickle(self.df_filename)
         self.df.to_csv(self.df_filename_csv,index=None)
+    def setdifficulty(self,df_sample):
+        self.new_df=df_sample.copy()
+        for row in tqdm(range(len(self.new_df))):
+            self.index_bad=self.new_df.iloc[row].name
+            path_jpeg_i=self.new_df['path_jpeg_i'].iloc[row]
+            xmin=self.new_df['xmin'].iloc[row]
+            xmax=self.new_df['xmax'].iloc[row]
+            ymin=self.new_df['ymin'].iloc[row]
+            ymax=self.new_df['ymax'].iloc[row]
+            difficult_i=self.new_df['difficulty'].iloc[row]
+            try:
+                xmin=str(xmin)
+                ymin=str(ymin)
+                xmax=str(xmax)
+                ymax=str(ymax)
 
+                label_k=self.df['label_i'][self.index_bad]
+                path_anno_bad=self.df['path_anno_i'][self.index_bad]
+
+                assert path_jpeg_i==self.df['path_jpeg_i'][self.index_bad]
+                f=open(path_anno_bad,'r')
+                f_read=f.readlines()
+                f.close()
+                f_new=[]
+
+
+
+                for ii,line in enumerate(f_read):
+                    if line.find(label_k)!=-1:   
+                        combo_i=f_read[ii-1:]
+                        combo_i="".join([w.replace('\n','').replace('/>','</') for w in combo_i])
+                        combo_i=combo_i.split('<object>')
+
+                        #print(len(combo_i),combo_i)
+                        if len(combo_i)>1:
+                            if combo_i[1].find(xmin)!=-1 and combo_i[1].find(xmax)!=-1 and combo_i[1].find(ymin)!=-1 and combo_i[1].find(ymax)!=-1:
+
+                                #for jj,line_j in enumerate(f_read[ii:]):
+                                for jj,line_j in enumerate(combo_i[1].split('</')):
+                                    if line_j.find('difficult')!=-1:
+                                        diff_line=jj+ii
+                                        print('FOUND YOU')
+                                        print(f_read[jj+ii])
+                                        print(line_j)
+                                        break
+                                f_new.append(line)
+                            else:
+                                f_new.append(line)
+                        else:
+                            f_new.append(line)
+                    else:
+                        f_new.append(line)
+
+                if f_new[diff_line].find('difficult')!=-1:
+                    f_new[diff_line]=f_new[diff_line].split('<difficult>')[0]+f'<difficult>{difficult_i}</difficult>'+f_new[diff_line].split('</difficult>')[1]
+                    print(f'UPDATED difficult_i to {difficult_i}')
+                try:
+                    f_new[0].find('annotation')!=-1
+                except:
+                    pprint(f_read)
+                    assert f_new[0].find('annotation')!=-1
+                #f_new=f_new[:start_line]+f_new[end_line+1:]
+                f=open(path_anno_bad,'w')
+                [f.writelines(w) for w in f_new]
+                f.close()  
+
+            except:
+                print('This ship has sailed, item not found.')
     def remove_blanks(self):
         unique_annos_notblank=self.df.path_anno_i.unique()
         unique_annos_notblank=[os.path.abspath(os.path.join(self.path_Annotations,os.path.basename(w))) for w in unique_annos_notblank]
@@ -1041,6 +1225,13 @@ class MOSAIC:
         print(self.w.value)
         root_tk.title("MOSAIC Chip Sorter")
         return self.w.value
+    def popup_set_difficult(self):
+        root_tk.title('Do you want to update annotation files for difficulty changes?')
+        self.w=popupWindow_SETDIFFICULT(root_tk,self.df,self.df_filename,self.df_filename_csv)
+        root_tk.wait_window(self.w.top)
+        print(self.w.value)
+        root_tk.title("MOSAIC Chip Sorter")
+        return self.w.value
 
     def popup_create_fakepatches(self):
         root_tk.title('Do you want to create fake patches on these classes to random backgrounds in the FAKE_BACKGROUNDS directory?')
@@ -1109,6 +1300,9 @@ class MOSAIC:
     def create_fakepatches(self):
         self.df=self.popup_create_fakepatches()
 
+    def set_difficult(self):
+        self.df=self.popup_set_difficult()
+
     def plot_dx_dy(self):
         if _platform!='darwin':
             plt.clf() #edit sjs 5/28/2022
@@ -1127,10 +1321,19 @@ class MOSAIC:
             xaxis_labels+='Press "{}" to change label to "{}"\n'.format(int_i,label_j)  
         plt.xlabel(xaxis_labels)
         plt.ylabel('DY (YMAX-YMIN)')
-        plt.scatter(self.df.DX,self.df.DY,c=self.df['label_i_int'],cmap='Spectral',s=5)
+        #plt.scatter(self.df.DX,self.df.DY,c=self.df['label_i_int'],cmap='Spectral',s=5)
+        self.df['difficulty']=[str(w).replace('\n','').strip(' ') for w in self.df['difficulty']]
+
+        if '1' in self.df['difficulty'].unique():
+            print('found some difficult stuff to plot')
+            self.df['difficulty']=[str(w).replace('\n','').strip(' ') for w in self.df['difficulty']]
+            plt.scatter(self.df[self.df['difficulty']=='1']['DX'],self.df[self.df['difficulty']=='1']['DY'],c=self.df[self.df['difficulty']=='1']['label_i_int'],cmap='Spectral',s=50,facecolors='none', edgecolors='g',marker='o')
+        plt.scatter(self.df['DX'],self.df['DY'],c=self.df['label_i_int'],cmap='Spectral',s=5)
         self.gca=plt.gca()
         self.gca.set_aspect('equal','datalim')
-        if len(self.df['label_i_int'].unique())>1:
+        if (len(self.df['label_i_int'].unique())>1) & (('1' in self.df['difficulty'].unique())==False):
+            plt.colorbar(boundaries=np.arange(len(self.df['label_i_int'].unique())+1)-0.5).set_ticks(np.arange(len(self.df['label_i_int'].unique())))
+        elif ('1' in self.df['difficulty'].unique()):
             plt.colorbar(boundaries=np.arange(len(self.df['label_i_int'].unique())+1)-0.5).set_ticks(np.arange(len(self.df['label_i_int'].unique())))
         plt.tight_layout()
         plt.show()
@@ -1614,7 +1817,7 @@ class MOSAIC:
         self.JPEGs=[os.path.join(self.path_JPEGImages,Anno.split(self.XML_EXT)[0]+self.JPG_EXT) for Anno in self.Annotations_list if Anno.split(self.XML_EXT)[0]+self.JPG_EXT in self.JPEGs_list]
         assert len(self.JPEGs)==len(self.Annotations) 
 
-        self.df=pd.DataFrame(columns=['xmin','xmax','ymin','ymax','width','height','label_i','path_jpeg_i','path_anno_i','difficulty'],dtype='object')
+        self.df=pd.DataFrame(columns=['xmin','xmax','ymin','ymax','width','height','label_i','path_jpeg_i','path_anno_i','difficulty','make_new'],dtype='object')
 
         from multiprocessing import Process,Queue
 
@@ -2175,6 +2378,9 @@ class MOSAIC:
             text_labels+='Press "h" to refresh.\n\n'
             text_labels+='Press "c" to create new name for object list below.\n\n'
             text_labels+='Press "d" to delete annotation for this object.\n\n'
+            text_labels+='Press "z" to delete entire selection.\n\n'
+            text_labels+='Press "x" to add to "difficult" selection.\n\n'
+            text_labels+='Press "r" to remove from "difficult" selection.\n\n'
             for label_j,int_i in self.label_dic.items():
                 if int_i<10:
                     text_labels+='Press "{}" to change label to "{}"\n'.format(int_i,label_j)
@@ -2248,6 +2454,9 @@ class MOSAIC:
             text_labels+='Press "h" to refresh.\n\n'
             text_labels+='Press "c" to create new name for object list below.\n\n'
             text_labels+='Press "d" to delete annotation for this object.\n\n'
+            text_labels+='Press "z" to delete entire selection.\n\n'
+            text_labels+='Press "x" to add to "difficult" selection.\n\n'
+            text_labels+='Press "r" to remove from "difficult" selection.\n\n'
             for label_j,int_i in self.label_dic.items():
                 if int_i<10:
                     text_labels+='Press "{}" to change label to "{}"\n'.format(int_i,label_j)
@@ -2330,8 +2539,27 @@ class MOSAIC:
             self.k=0
             self.run_selection=self.look_at_selection()
             #self.inspect_mosaic=False
-        if event.key=='z':
-
+        if event.key=='x': #add to difficult
+            self.eymin=min(self.ey2,self.ey)
+            self.eymax=max(self.ey2,self.ey)
+            self.exmin=min(self.ex2,self.ex)
+            self.exmax=max(self.ex2,self.ex)
+            for row in  self.df[(self.df['DX']>self.exmin) & (self.df['DX']<self.exmax) & (self.df['DY']>self.eymin) & (self.df['DY']<self.eymax)].index:
+                self.df.at[row,'difficulty']='1'
+            df_sample=self.df[(self.df['DX']>self.exmin) & (self.df['DX']<self.exmax) & (self.df['DY']>self.eymin) & (self.df['DY']<self.eymax)].copy()
+            self.setdifficulty(df_sample)
+            print('Updated difficulty!')        
+        if event.key=='r': #remove difficult
+            self.eymin=min(self.ey2,self.ey)
+            self.eymax=max(self.ey2,self.ey)
+            self.exmin=min(self.ex2,self.ex)
+            self.exmax=max(self.ex2,self.ex)
+            for row in  self.df[(self.df['DX']>self.exmin) & (self.df['DX']<self.exmax) & (self.df['DY']>self.eymin) & (self.df['DY']<self.eymax)].index:
+                self.df.at[row,'difficulty']='0'
+            df_sample=self.df[(self.df['DX']>self.exmin) & (self.df['DX']<self.exmax) & (self.df['DY']>self.eymin) & (self.df['DY']<self.eymax)].copy()
+            self.setdifficulty(df_sample)
+            print('Updated difficulty!')  
+        if event.key=='z': #deletes bounding boxes from selection
             if 'umap_input' in self.df.columns:
                 self.df_sample=self.df.drop(['umap_input'],axis=1).copy()
             else:
@@ -2366,8 +2594,6 @@ class MOSAIC:
                     end_line=0
                     self.df.drop(self.index_bad,axis=0)
                     self.df=self.df.drop(self.index_bad,axis=0)
-
-
                     for ii,line in enumerate(f_read):
                         if line.find(label_k)!=-1:   
                             combo_i=f_read[ii-1:]
@@ -2619,7 +2845,26 @@ class MOSAIC:
             self.label_dic[self.w.value]=new_item_int
             self.rev_label_dic={v:k for k,v in self.label_dic.items()}
             self.draw_umap()
-
+        if event.key=='x': #add to difficult
+            self.eymin=min(self.ey2,self.ey)
+            self.eymax=max(self.ey2,self.ey)
+            self.exmin=min(self.ex2,self.ex)
+            self.exmax=max(self.ex2,self.ex)
+            for row in self.df[(self.df['emb_X']>self.exmin) & (self.df['emb_X']<self.exmax) & (self.df['emb_Y']>self.eymin) & (self.df['emb_Y']<self.eymax)].index:
+                self.df.at[row,'difficulty']='1'
+            df_sample=self.df[(self.df['emb_X']>self.exmin) & (self.df['emb_X']<self.exmax) & (self.df['emb_Y']>self.eymin) & (self.df['emb_Y']<self.eymax)].copy()
+            self.setdifficulty(df_sample)
+            print('Updated difficulty!')   
+        if event.key=='r': #remove difficulty
+            self.eymin=min(self.ey2,self.ey)
+            self.eymax=max(self.ey2,self.ey)
+            self.exmin=min(self.ex2,self.ex)
+            self.exmax=max(self.ex2,self.ex)
+            for row in self.df[(self.df['emb_X']>self.exmin) & (self.df['emb_X']<self.exmax) & (self.df['emb_Y']>self.eymin) & (self.df['emb_Y']<self.eymax)].index:
+                self.df.at[row,'difficulty']='0'
+            df_sample=self.df[(self.df['emb_X']>self.exmin) & (self.df['emb_X']<self.exmax) & (self.df['emb_Y']>self.eymin) & (self.df['emb_Y']<self.eymax)].copy()
+            self.setdifficulty(df_sample)
+            print('Updated difficulty!')  
         if event.key=='z':
 
             if 'umap_input' in self.df.columns:
@@ -3276,6 +3521,9 @@ class MOSAIC:
         text_labels+='Press "h" to refresh.\n\n'
         text_labels+='Press "c" to create new name for object list below.\n\n'
         text_labels+='Press "d" to delete annotation for this object.\n\n'
+        text_labels+='Press "z" to delete entire selection.\n\n'
+        text_labels+='Press "x" to add to "difficult" selection.\n\n'
+        text_labels+='Press "r" to remove from "difficult" selection.\n\n'
 
         for label_j,int_i in self.label_dic.items():
             if int_i<10:
@@ -4123,6 +4371,11 @@ class App:
         self.create_fakepatches_note=tk.Label(self.root,text='21. \n Create New Dataset \n with Random Backgrounds',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.create_fakepatches_note.grid(row=18,column=32,sticky='ne') 
 
+        # self.set_difficult_button=Button(self.root,image=self.icon_create,command=self.set_difficult,bg=self.root_bg,fg=self.root_fg)
+        # self.set_difficult_button.grid(row=15,column=32,sticky='se')
+        # self.set_difficult_note=tk.Label(self.root,text='21. \n Set Difficulty',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        # self.set_difficult_note.grid(row=16,column=32,sticky='ne') 
+
     def checkbutton_blanks(self):
         self.BLANK_boolean_var = tk.BooleanVar()
         self.style3=ttk.Style()
@@ -4212,6 +4465,10 @@ class App:
         self.MOSAIC.create_fakepatches()
         self.load_df()
         self.update_counts('na')
+    # def set_difficult(self):
+    #     self.MOSAIC.set_difficult()
+    #     self.load_df()
+    #     self.update_counts('na')
     def look_at_objects(self):
         self.MOSAIC.look_at_objects()
         self.load_df()
