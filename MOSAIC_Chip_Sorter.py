@@ -1336,7 +1336,7 @@ class MOSAIC:
         self.gca.set_aspect('equal','datalim')
         if (len(self.df['label_i_int'].unique())>1) & (('1' in self.df['difficulty'].unique())==False):
             plt.colorbar(boundaries=np.arange(len(self.df['label_i_int'].unique())+1)-0.5).set_ticks(np.arange(len(self.df['label_i_int'].unique())))
-        elif ('1' in self.df['difficulty'].unique()):
+        elif ('1' in self.df['difficulty'].unique()) & (len(self.df['label_i_int'].unique())>1):
             plt.colorbar(boundaries=np.arange(len(self.df['label_i_int'].unique())+1)-0.5).set_ticks(np.arange(len(self.df['label_i_int'].unique())))
         plt.tight_layout()
         plt.show()
@@ -3138,8 +3138,12 @@ class MOSAIC:
                 self.ymin_i=self.df_i['ymin'].iloc[i]
                 self.ymax_i=self.df_i['ymax'].iloc[i]
                 self.longest=max(self.ymax_i-self.ymin_i,self.xmax_i-self.xmin_i)
-
-                self.chip_i=self.jpg_i[self.ymin_i:self.ymax_i,self.xmin_i:self.xmax_i,:]
+                if len(self.jpg_i.shape)==3:
+                    self.chip_i=self.jpg_i[self.ymin_i:self.ymax_i,self.xmin_i:self.xmax_i,:]
+                    self.GRAY=False
+                elif len(self.jpg_i.shape)==2:
+                    self.chip_i=self.jpg_i[self.ymin_i:self.ymax_i,self.xmin_i:self.xmax_i]
+                    self.GRAY=True
                 try:
                     self.chip_square_i=Image.fromarray(self.chip_i) 
                 except:
@@ -3151,13 +3155,20 @@ class MOSAIC:
                 if j==1:
                     self.A_ind=self.df_i.iloc[i].name
                     self.B_ind=self.df_i.iloc[i].name
-                    self.grayA=cv2.cvtColor(self.chip_square_i,cv2.COLOR_BGR2GRAY) 
-                    self.grayB=cv2.cvtColor(self.chip_square_i,cv2.COLOR_BGR2GRAY) 
+                    if self.GRAY==False:
+                        self.grayA=cv2.cvtColor(self.chip_square_i,cv2.COLOR_BGR2GRAY) 
+                        self.grayB=cv2.cvtColor(self.chip_square_i,cv2.COLOR_BGR2GRAY) 
+                    else:
+                        self.grayA=self.chip_square_i
+                        self.grayB=self.chip_square_i
                 else:
                     self.A_ind=self.df_i.iloc[i-1].name
                     self.B_ind=self.df_i.iloc[i].name  
                     self.grayA=self.grayB
-                    self.grayB=cv2.cvtColor(self.chip_square_i,cv2.COLOR_BGR2GRAY) 
+                    if self.GRAY==False:
+                        self.grayB=cv2.cvtColor(self.chip_square_i,cv2.COLOR_BGR2GRAY)
+                    else:
+                        self.grayB=self.chip_square_i 
                   
                 self.axes_list.append(self.fig_i.add_subplot(DX,DY,i+1-self.start))
                 plt.subplots_adjust(wspace=0.2,hspace=0.5)
@@ -3293,8 +3304,12 @@ class MOSAIC:
                 #     except:
                 #         self.chip_i=self.jpg_i[self.ymin_i:self.ymax_i,self.xmin_i:self.xmax_i,:]
                 #         self.chip_square_i=Image.fromarray(self.chip_i)     
-
-                self.chip_i=self.jpg_i[self.ymin_i:self.ymax_i,self.xmin_i:self.xmax_i,:]
+                if len(self.jpg_i.shape)==3:
+                    self.GRAY=False
+                    self.chip_i=self.jpg_i[self.ymin_i:self.ymax_i,self.xmin_i:self.xmax_i,:]
+                elif len(self.jpg_i.shape)==2:
+                    self.GRAY=True
+                    self.chip_i=self.jpg_i[self.ymin_i:self.ymax_i,self.xmin_i:self.xmax_i]                    
                 self.chip_square_i=Image.fromarray(self.chip_i) 
 
 
@@ -3304,13 +3319,20 @@ class MOSAIC:
                 if j==1:
                     self.A_ind=self.df_i.iloc[i].name
                     self.B_ind=self.df_i.iloc[i].name
-                    self.grayA=cv2.cvtColor(self.chip_square_i,cv2.COLOR_BGR2GRAY) 
-                    self.grayB=cv2.cvtColor(self.chip_square_i,cv2.COLOR_BGR2GRAY) 
+                    if self.GRAY==False:
+                        self.grayA=cv2.cvtColor(self.chip_square_i,cv2.COLOR_BGR2GRAY) 
+                        self.grayB=cv2.cvtColor(self.chip_square_i,cv2.COLOR_BGR2GRAY) 
+                    else:
+                        self.grayA=self.chip_square_i 
+                        self.grayB=self.chip_square_i                        
                 else:
                     self.A_ind=self.df_i.iloc[i-1].name
                     self.B_ind=self.df_i.iloc[i].name  
                     self.grayA=self.grayB
-                    self.grayB=cv2.cvtColor(self.chip_square_i,cv2.COLOR_BGR2GRAY) 
+                    if self.GRAY==False:
+                        self.grayB=cv2.cvtColor(self.chip_square_i,cv2.COLOR_BGR2GRAY) 
+                    else:
+                        self.grayB=self.chip_square_i
                 if self.useSSIM:
                     (self.score,self.diff)=ssim(self.grayA,self.grayB,full=True)
                     self.diff=(self.diff*255).astype("uint8")
@@ -3556,7 +3578,7 @@ class MOSAIC:
             pass
         if (len(self.df['label_i_int'].unique())>1) & (('1' in self.df['difficulty'].unique())==False):
             plt.colorbar(boundaries=np.arange(len(self.df['label_i_int'].unique())+1)-0.5).set_ticks(np.arange(len(self.df['label_i_int'].unique())))
-        elif ('1' in self.df['difficulty'].unique()):
+        elif ('1' in self.df['difficulty'].unique()) & (len(self.df['label_i_int'].unique())>1):
             plt.colorbar(boundaries=np.arange(len(self.df['label_i_int'].unique())+1)-0.5).set_ticks(np.arange(len(self.df['label_i_int'].unique())))
         plt.tight_layout()
         plt.show()
