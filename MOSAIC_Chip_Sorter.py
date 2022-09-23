@@ -1319,9 +1319,24 @@ class MOSAIC:
 
         plt.rcParams['axes.facecolor'] = 'gray'
         plt.grid(c='white')
-        xaxis_labels='DX (XMAX- XMIN)\nPress "d" to delete annotation for this object.\n'    
+        text_labels='Press "y" to select all objects in MOSAIC.\n\n'
+        text_labels+='Press "u" to unselect all objects in MOSAIC.\n\n'
+        text_labels+='Press "t" for dropdown to change object name. \n\n'
+        text_labels+='Press "h" to refresh.\n\n'
+        text_labels+='Press "c" to create new name for object list below.\n\n'
+        text_labels+='Press "d" to delete annotation for this object.\n\n'
+        text_labels+='Press "z" to delete entire selection.\n\n'
+        text_labels+='Press "x" to add to "difficult" selection.\n\n'
+        text_labels+='Press "r" to remove from "difficult" selection.\n\n'
+        #xaxis_labels='Press "d" to delete annotation for this object.\n'    
+        xaxis_labels=text_labels
         for label_j,int_i in self.label_dic.items():
             xaxis_labels+='Press "{}" to change label to "{}"\n'.format(int_i,label_j)  
+        f=open('text_labels.txt','w')
+        [f.writelines( xaxis_labels)]
+        f.close()
+        os.system(open_cmd+' '+'text_labels.txt')
+        xaxis_labels='DX (XMAX- XMIN)'
         plt.xlabel(xaxis_labels)
         plt.ylabel('DY (YMAX-YMIN)')
         #plt.scatter(self.df.DX,self.df.DY,c=self.df['label_i_int'],cmap='Spectral',s=5)
@@ -1963,6 +1978,74 @@ class MOSAIC:
             plt.close('all') 
             cv2.destroyAllWindows() #edit sjs 6/3/2022
             self.close_window=True
+        if event.key=='c':
+            self.popup()
+            new_item_int=len(self.label_dic.keys())
+            self.label_dic[self.w.value]=new_item_int
+            self.rev_label_dic={v:k for k,v in self.label_dic.items()}
+        if event.key=='t':
+            event.key=self.popup_multint(self.label_dic)
+            print('NEW event.key=={}'.format(event.key))  
+            self.selection_list={} 
+            print('self.axes_list')
+            print(self.axes_list)
+            for j,ax_j in enumerate(self.axes_list):
+                if str(ax_j.title).find('BAD')!=-1:
+                       print(ax_j.title)
+                       item=int(str(ax_j.title).split("= BAD")[0].split(",")[-1].replace("'","").replace(" ","").replace('"',""))
+                       print('subplot j=',j)
+                       self.selection_list[j]=self.df_i.iloc[item].name
+
+            int_values=[str(w) for w in self.label_dic.values()]
+            if len(self.selection_list)>0 and event.key in int_values:
+                for j,selection_i in self.selection_list.items():
+                    self.index_bad=selection_i
+                    for label_j,int_i in self.label_dic.items(): 
+                        #print('label_j',label_j,'int_i',int_i)
+                        if event.key==str(int_i):
+                            print('fixing label')
+                            xmin=str(self.df['xmin'][self.index_bad])
+                            xmax=str(self.df['xmax'][self.index_bad])
+                            ymin=str(self.df['ymin'][self.index_bad])
+                            ymax=str(self.df['ymax'][self.index_bad])
+                            print('xmin',xmin)
+                            print('xmax',xmax)
+                            print('ymin',ymin)
+                            print('ymax',ymax)
+                            label_k=self.df['label_i'][self.index_bad]
+                            self.df.at[self.index_bad,'label_i']=self.rev_label_dic[int_i]
+                            self.df.at[self.index_bad,'label_i_int']=int_i
+                            self.df.at[self.index_bad,'checked']=''
+                            f=open(self.df['path_anno_i'][self.index_bad],'r')
+                            f_read=f.readlines()
+                            f.close()
+                            f_new=[]
+                            for ii,line in enumerate(f_read):
+                                if line.find(label_k)!=-1:
+                                    print('found label_k',label_k)
+                                    combo_i=f_read[ii-1:]
+                                    combo_i="".join([w for w in combo_i])
+                                    combo_i=combo_i.split('<object>')
+                                    #pprint(combo_i)
+                                    if combo_i[1].find(xmin)!=-1 and combo_i[1].find(xmax)!=-1 and combo_i[1].find(ymin)!=-1 and combo_i[1].find(ymax)!=-1:
+                                        print('fixing it')
+                                        print(line.replace(label_k,label_j))
+                                        f_new.append(line.replace(label_k,label_j))
+                                    else:
+                                        f_new.append(line)
+                                else:
+                                    f_new.append(line)
+                            f=open(self.df['path_anno_i'][self.index_bad],'w')
+                            [f.writelines(w) for w in f_new]
+                            f.close()  
+                            self.df.to_pickle(self.df_filename)
+                            self.df.to_csv(self.df_filename_csv,index=None)
+                            self.title_list[j].set_text('{}'.format(self.df['label_i'][self.index_bad]))
+                            self.title_list[j].set_color('green')
+                            
+                            break    
+                            #plt.show()
+                self.load()  
         self.df.to_pickle(self.df_filename)
         self.df.to_csv(self.df_filename_csv,index=None)
     def on_key_object(self,event):
@@ -1984,6 +2067,7 @@ class MOSAIC:
         if event.key=='f' or event.key=='u':              
             self.df.to_pickle(self.df_filename)
             self.df.to_csv(self.df_filename_csv,index=None)
+
     def onclick(self,event):
         #global df_i,axes_list,df,title_list,img_list
         print('%s click: button=%d, x=%d, y=%d, xdata=%f, ydata=%f' %
@@ -2389,9 +2473,9 @@ class MOSAIC:
                     text_labels+='Press "{}" to change label to "{}"\n'.format(int_i,label_j)
                 else:
                     text_labels+='Press "t" and select "{}" to change label to "{}"\n'.format(int_i,label_j)
-            draw.text((0, 0),
-                text_labels,
-                fill='green', stroke_fill='blue',font=font)
+            # draw.text((0, 0),
+            #     text_labels,
+            #     fill='green', stroke_fill='blue',font=font)
             draw.text((xmin + 4, ymin + 4),
                 '%s\n' % (label_i),
                 fill=self.COLOR, font=font)
@@ -2466,9 +2550,9 @@ class MOSAIC:
                 else:
                     text_labels+='Press "t" and select "{}" to change label to "{}"\n'.format(int_i,label_j)
 
-            draw.text((0, 0),
-                text_labels,
-                fill='green', stroke_fill='blue',font=font)
+            # draw.text((0, 0),
+            #     text_labels,
+            #     fill='green', stroke_fill='blue',font=font)
             draw.text((xmin + 4, ymin + 4),
                 '%s\n' % (label_i),
                 fill=self.COLOR, font=font)
@@ -3555,7 +3639,7 @@ class MOSAIC:
                 text_labels+='Press "{}" to change label to "{}"\n'.format(int_i,label_j)
             else:
                 text_labels+='Press "t" and select "{}" to change label to "{}"\n'.format(int_i,label_j)
-        plt.xlabel(text_labels)
+        #plt.xlabel(text_labels)
 
         self.df['difficulty']=[str(w).replace('\n','').strip(' ') for w in self.df['difficulty']]
 
@@ -3570,6 +3654,11 @@ class MOSAIC:
         self.ey2=max(self.df['emb_Y'])
         self.gca=plt.gca()
         self.gca.set_aspect('equal','datalim')
+
+        f=open('text_labels.txt','w')
+        [f.writelines(text_labels)]
+        f.close()
+        os.system(open_cmd+' '+'text_labels.txt')
         try:
             plt.ylabel('Press "h" to zoom out')
             plt.xlim([self.a_xmin,self.a_xmax])
@@ -4463,6 +4552,7 @@ class App:
         self.MOSAIC.load()
         self.MOSAIC.look_at_target(self.target_i.get())
         self.update_counts('na')
+        self.load_df()
 
 
     def make_chips(self):
