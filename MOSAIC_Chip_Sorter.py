@@ -1983,6 +1983,104 @@ class MOSAIC:
             new_item_int=len(self.label_dic.keys())
             self.label_dic[self.w.value]=new_item_int
             self.rev_label_dic={v:k for k,v in self.label_dic.items()}
+        if event.key=='y':
+            print('SELECTING ALL')
+            self.selection_list={}
+            for j,ax_j in enumerate(self.axes_list):
+                index_bad=self.df_i.iloc[self.dic[j]].name
+                self.df.at[index_bad,'selected']=False #selected is false
+                self.title_list[j].set_text('{} = BAD'.format(self.dic[j]))
+                self.title_list[j].set_color('red')
+                self.selection_list[j]=index_bad
+        if event.key=='u':
+            print('DESELECTING ALL')
+            self.selection_list={}
+            for j,ax_j in enumerate(self.axes_list):
+                index_bad=self.df_i.iloc[self.dic[j]].name
+                self.df.at[index_bad,'selected']=True #selected is true
+                self.title_list[j].set_text('{}'.format(self.df['label_i'][index_bad]))
+                self.title_list[j].set_color('purple')
+                if index_bad in self.selection_list.values():
+                    self.selection_list.pop(j) 
+            #plt.show()
+        if event.key=='d':
+            self.selection_list={} 
+            print('self.axes_list')
+            print(self.axes_list)
+            for j,ax_j in enumerate(self.axes_list):
+                if str(ax_j.title).find('BAD')!=-1:
+                       print(ax_j.title)
+                       item=int(str(ax_j.title).split("= BAD")[0].split(",")[-1].replace("'","").replace(" ","").replace('"',""))
+                       print('subplot j=',j)
+                       self.selection_list[j]=self.df_i.iloc[item].name
+            if len(self.selection_list)>0:
+                for j,selection_i in self.selection_list.items():
+                    self.index_bad=selection_i
+                    try:
+                        print('deleting bounding box')
+                        xmin=str(self.df['xmin'][self.index_bad])
+                        xmax=str(self.df['xmax'][self.index_bad])
+                        ymin=str(self.df['ymin'][self.index_bad])
+                        ymax=str(self.df['ymax'][self.index_bad])
+                        print('xmin',xmin)
+                        print('xmax',xmax)
+                        print('ymin',ymin)
+                        print('ymax',ymax)
+                        label_k=self.df['label_i'][self.index_bad]
+                        path_anno_bad=self.df['path_anno_i'][self.index_bad]
+                        f=open(path_anno_bad,'r')
+                        f_read=f.readlines()
+                        f.close()
+                        f_new=[]
+                        start_line=0
+                        end_line=0
+                        self.df.drop(self.index_bad,axis=0)
+                        self.df=self.df.drop(self.index_bad,axis=0)
+                        for ii,line in enumerate(f_read):
+                            if line.find(label_k)!=-1:   
+                                combo_i=f_read[ii-1:]
+                                combo_i="".join([w.replace('\n','').replace('/>','</') for w in combo_i])
+                                combo_i=combo_i.split('<object>')
+                                #print(len(combo_i),combo_i)
+                                #if len(combo_i)>1:
+                                if combo_i[1].find(xmin)!=-1 and combo_i[1].find(xmax)!=-1 and combo_i[1].find(ymin)!=-1 and combo_i[1].find(ymax)!=-1:
+                                    start_line=ii-1
+                                    for jj,line_j in enumerate(combo_i[1].split('</')):
+                                        if line_j.find('object>')!=-1:
+                                            end_line=jj+ii
+                                            print('found label_k',label_k)
+                                            print('deleting bounding box')
+                                            print('xmin',xmin)
+                                            print('xmax',xmax)
+                                            print('ymin',ymin)
+                                            print('ymax',ymax)
+                                        
+                                    f_new.append(line)
+                                else:
+                                    f_new.append(line)
+                                #else:
+                                #    f_new.append(line)
+                            else:
+                                f_new.append(line)
+                        if end_line!=0:
+                            f_new=f_new[:start_line]+f_new[end_line+1:]
+
+                        try:
+                            f_new[0].find('annotation')!=-1
+                        except:
+                            pprint(f_read)
+                            assert f_new[0].find('annotation')!=-1
+                        f=open(path_anno_bad,'w')
+                        [f.writelines(w) for w in f_new]
+                        f.close()  
+                        self.df.to_pickle(self.df_filename)
+                        self.df.to_csv(self.df_filename_csv,index=None)
+                    except:
+                        print('This ship has sailed, item not found.')
+                    self.title_list[j].set_text('{} = DELETED'.format(self.dic[j]))
+                    self.title_list[j].set_color('black')
+                plt.show()
+            self.selection_list={}
         if event.key=='t':
             event.key=self.popup_multint(self.label_dic)
             print('NEW event.key=={}'.format(event.key))  
