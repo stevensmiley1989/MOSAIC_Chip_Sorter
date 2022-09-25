@@ -166,6 +166,7 @@ else:
 if os.path.exists('libs/open_cmd.py'):
     from libs import open_cmd
     open_cmd=open_cmd.open_cmd
+
 root_tk=tk.Tk()
 ROOT_H=int(root_tk.winfo_screenheight()*0.95)
 ROOT_W=int(root_tk.winfo_screenwidth()*0.95)
@@ -1181,7 +1182,7 @@ class MOSAIC:
                 print('no blank jpegs')
 
     def SHOWTABLE_BUTTONS(self):
-        self.popup_SHOWTABLE_button=Button(root_tk,text='Show df',command=self.popupWindow_showtable,bg=DEFAULT_SETTINGS.root_fg,fg=DEFAULT_SETTINGS.root_bg)
+        self.popup_SHOWTABLE_button=Button(frame_table,text='Show df',command=self.popupWindow_showtable,bg=DEFAULT_SETTINGS.root_fg,fg=DEFAULT_SETTINGS.root_bg)
         self.popup_SHOWTABLE_button.grid(row=8,column=2,sticky='sw')
 
     def popupWindow_showtable(self):
@@ -4005,52 +4006,52 @@ class App:
         self.open_anno_label_var=tk.StringVar()
         self.open_anno_label_var.set(self.path_Annotations)
 
-        self.open_anno_button=Button(self.root,image=self.icon_folder,command=partial(self.select_folder,self.path_Annotations,'Open Annotations Folder',self.open_anno_label_var),bg=self.root_bg,fg=self.root_fg)
+        self.open_anno_button=Button(self.frame_table,image=self.icon_folder,command=partial(self.select_folder,self.path_Annotations,'Open Annotations Folder',self.open_anno_label_var),bg=self.root_bg,fg=self.root_fg)
         self.open_anno_button.grid(row=2,column=1,sticky='se')
-        self.open_anno_note=tk.Label(self.root,text="1.a \n Annotations dir",bg=self.root_bg,fg=self.root_fg,font=("Arial", 8))
+        self.open_anno_note=tk.Label(self.frame_table,text="1.a \n Annotations dir",bg=self.root_bg,fg=self.root_fg,font=("Arial", 8))
         self.open_anno_note.grid(row=3,column=1,sticky='ne')
 
         cmd_i=open_cmd+" '{}'".format(self.open_anno_label_var.get())
-        self.open_anno_label=Button(self.root,textvariable=self.open_anno_label_var, command=partial(self.run_cmd,cmd_i),bg=self.root_fg,fg=self.root_bg,font=("Arial", 8))
+        self.open_anno_label=Button(self.frame_table,textvariable=self.open_anno_label_var, command=partial(self.run_cmd,cmd_i),bg=self.root_fg,fg=self.root_bg,font=("Arial", 8))
 
         self.open_anno_label.grid(row=2,column=2,columnspan=50,sticky='sw')
 
         self.open_jpeg_label_var=tk.StringVar()
         self.open_jpeg_label_var.set(self.path_JPEGImages)
 
-        self.open_jpeg_button=Button(self.root,image=self.icon_folder,command=partial(self.select_folder,self.path_JPEGImages,'Open JPEGImages Folder',self.open_jpeg_label_var),bg=self.root_bg,fg=self.root_fg)
+        self.open_jpeg_button=Button(self.frame_table,image=self.icon_folder,command=partial(self.select_folder,self.path_JPEGImages,'Open JPEGImages Folder',self.open_jpeg_label_var),bg=self.root_bg,fg=self.root_fg)
         self.open_jpeg_button.grid(row=4,column=1,sticky='se')
-        self.open_jpeg_note=tk.Label(self.root,text="1.b \n JPEGImages dir",bg=self.root_bg,fg=self.root_fg,font=("Arial", 8))
+        self.open_jpeg_note=tk.Label(self.frame_table,text="1.b \n JPEGImages dir",bg=self.root_bg,fg=self.root_fg,font=("Arial", 8))
         self.open_jpeg_note.grid(row=5,column=1,sticky='ne')
 
-        self.open_video_label_var=tk.StringVar()
-        self.open_video_label_var.set(self.path_video)
-        self.open_video_button=Button(self.root,image=self.icon_folder,command=self.select_video,bg=self.root_bg,fg=self.root_fg)
-        self.open_video_button.grid(row=2,column=31,sticky='se')
-        self.create_video_button=Button(self.root,image=self.icon_video,command=self.create_JPEGImages_from_video,bg=self.root_bg,fg=self.root_fg)
-        self.create_video_button.grid(row=2,column=30,sticky='se')
-        self.open_video_note=tk.Label(self.root,text="1.c \n Create JPEGImages from Video File",bg=self.root_bg,fg=self.root_fg,font=("Arial", 8))
-        self.open_video_note.grid(row=3,column=30,sticky='ne') 
+        # self.open_video_label_var=tk.StringVar()
+        # self.open_video_label_var.set(self.path_video)
+        # self.open_video_button=Button(self.frame_table,image=self.icon_folder,command=self.select_video,bg=self.root_bg,fg=self.root_fg)
+        # self.open_video_button.grid(row=2,column=31,sticky='se',padx=20)
+        # self.create_video_button=Button(self.frame_table,image=self.icon_video,command=self.create_JPEGImages_from_video,bg=self.root_bg,fg=self.root_fg)
+        # self.create_video_button.grid(row=2,column=30,sticky='se',padx=20)
+        # self.open_video_note=tk.Label(self.frame_table,text="1.c \n Create JPEGImages from Video File",bg=self.root_bg,fg=self.root_fg,font=("Arial", 8))
+        # self.open_video_note.grid(row=3,column=30,sticky='ne',padx=20) 
 
-        cmd_i=open_cmd+" '{}'".format(self.open_video_label_var.get())
-        self.open_video_label=Button(self.root,textvariable=self.open_video_label_var, command=partial(self.run_cmd,cmd_i),bg=self.root_fg,fg=self.root_bg,font=("Arial", 8))
-        self.open_video_label.grid(row=2,column=32,columnspan=50,sticky='sw')    
+        # cmd_i=open_cmd+" '{}'".format(self.open_video_label_var.get())
+        # self.open_video_label=Button(self.frame_table,textvariable=self.open_video_label_var, command=partial(self.run_cmd,cmd_i),bg=self.root_fg,fg=self.root_bg,font=("Arial", 8))
+        # self.open_video_label.grid(row=2,column=32,columnspan=50,sticky='sw')    
 
-        cmd_i=open_cmd+" '{}'".format(self.open_jpeg_label_var.get())
-        self.open_jpeg_label=Button(self.root,textvariable=self.open_jpeg_label_var, command=partial(self.run_cmd,cmd_i),bg=self.root_fg,fg=self.root_bg,font=("Arial", 8))
+        # cmd_i=open_cmd+" '{}'".format(self.open_jpeg_label_var.get())
+        # self.open_jpeg_label=Button(self.frame_table,textvariable=self.open_jpeg_label_var, command=partial(self.run_cmd,cmd_i),bg=self.root_fg,fg=self.root_bg,font=("Arial", 8))
 
-        self.open_jpeg_label.grid(row=4,column=2,columnspan=50,sticky='sw')
+        # self.open_jpeg_label.grid(row=4,column=2,columnspan=50,sticky='sw')
         if os.path.exists(self.path_Annotations) and os.path.exists(self.path_JPEGImages):
             self.MOSAIC=MOSAIC(self.path_JPEGImages,self.path_Annotations)
             if os.path.exists(self.MOSAIC.df_filename)==True:
-                self.load_df_button=Button(self.root,image=self.icon_load,command=self.load_df,bg=self.root_bg,fg=self.root_fg)
+                self.load_df_button=Button(self.frame_table,image=self.icon_load,command=self.load_df,bg=self.root_bg,fg=self.root_fg)
                 self.load_df_button.grid(row=8,column=1,sticky='se')
-                self.load_note=tk.Label(self.root,text='3. \n Load df     ',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+                self.load_note=tk.Label(self.frame_table,text='3. \n Load df     ',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
                 self.load_note.grid(row=9,column=1,sticky='ne')
                 
-            self.create_df_button=Button(self.root,image=self.icon_create,command=self.create_df,bg=self.root_bg,fg=self.root_fg)
+            self.create_df_button=Button(self.frame_table,image=self.icon_create,command=self.create_df,bg=self.root_bg,fg=self.root_fg)
             self.create_df_button.grid(row=6,column=1,sticky='se')
-            self.create_note=tk.Label(self.root,text='2. \n Create df    ',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+            self.create_note=tk.Label(self.frame_table,text='2. \n Create df    ',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
             self.create_note.grid(row=7,column=1,sticky='ne')
             try:
                 self.open_originals_with_labelImg_note.destroy()
@@ -4060,21 +4061,21 @@ class App:
                 self.open_originals_with_labelImg_button.destroy()
             except:
                 pass
-            self.open_originals_with_labelImg_button=Button(self.root,image=self.icon_labelImg,command=self.open_originals_with_labelImg_START,bg=self.root_bg,fg=self.root_fg)
-            self.open_originals_with_labelImg_button.grid(row=2,column=29,sticky='se')
-            self.open_originals_with_labelImg_note=tk.Label(self.root,text='12. \n Open originals w/ labelImg.py',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
-            self.open_originals_with_labelImg_note.grid(row=3,column=29,sticky='ne')
+            self.open_originals_with_labelImg_button=Button(self.frame_table,image=self.icon_labelImg,command=self.open_originals_with_labelImg_START,bg=self.root_bg,fg=self.root_fg)
+            self.open_originals_with_labelImg_button.grid(row=2+10,column=29,sticky='se',padx=20)
+            self.open_originals_with_labelImg_note=tk.Label(self.frame_table,text='12. \n Open originals w/ labelImg.py',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+            self.open_originals_with_labelImg_note.grid(row=3+10,column=29,sticky='ne',padx=20)
 
 
-        self.save_settings_button=Button(self.root,image=self.icon_save_settings,command=self.save_settings,bg=self.root_bg,fg=self.root_fg)
+        self.save_settings_button=Button(self.frame_table,image=self.icon_save_settings,command=self.save_settings,bg=self.root_bg,fg=self.root_fg)
         self.save_settings_button.grid(row=22,column=1,sticky='se')
-        self.save_settings_note=tk.Label(self.root,text='Save Settings',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.save_settings_note=tk.Label(self.frame_table,text='Save Settings',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.save_settings_note.grid(row=23,column=1,sticky='ne')
 
     def play_video(self):
         self.open_video_label.destroy()
         cmd_i=open_cmd+" '{}'".format(self.open_video_label_var.get())
-        self.open_video_label=Button(self.root,textvariable=self.open_video_label_var, command=partial(self.run_cmd,cmd_i),bg=self.root_fg,fg=self.root_bg,font=("Arial", 8))
+        self.open_video_label=Button(self.frame_table,textvariable=self.open_video_label_var, command=partial(self.run_cmd,cmd_i),bg=self.root_fg,fg=self.root_bg,font=("Arial", 8))
         self.open_video_label.grid(row=2,column=32,columnspan=50,sticky='sw')      
 
     def select_video(self,):
@@ -4130,8 +4131,8 @@ class App:
             self.open_anno_label.destroy()
             del self.open_anno_label
             cmd_i=open_cmd+" '{}'".format(self.open_anno_label_var.get())
-            self.open_anno_label=Button(self.root,textvariable=self.open_anno_label_var, command=partial(self.run_cmd,cmd_i),bg=self.root_fg,fg=self.root_bg,font=("Arial", 8))
-            #self.open_anno_label=tk.Label(self.root,textvariable=self.open_anno_label_var)
+            self.open_anno_label=Button(self.frame_table,textvariable=self.open_anno_label_var, command=partial(self.run_cmd,cmd_i),bg=self.root_fg,fg=self.root_bg,font=("Arial", 8))
+            #self.open_anno_label=tk.Label(self.frame_table,textvariable=self.open_anno_label_var)
             self.open_anno_label.grid(row=2,column=2,columnspan=50,sticky='sw')
             print(self.path_Annotations)
 
@@ -4140,8 +4141,8 @@ class App:
             self.open_jpeg_label.destroy()
             del self.open_jpeg_label
             cmd_i=open_cmd+" '{}'".format(self.open_jpeg_label_var.get())
-            self.open_jpeg_label=Button(self.root,textvariable=self.open_jpeg_label_var, command=partial(self.run_cmd,cmd_i),bg=self.root_fg,fg=self.root_bg,font=("Arial", 8))
-            #self.open_jpeg_label=tk.Label(self.root,textvariable=self.open_jpeg_label_var)
+            self.open_jpeg_label=Button(self.frame_table,textvariable=self.open_jpeg_label_var, command=partial(self.run_cmd,cmd_i),bg=self.root_fg,fg=self.root_bg,font=("Arial", 8))
+            #self.open_jpeg_label=tk.Label(self.frame_table,textvariable=self.open_jpeg_label_var)
             self.open_jpeg_label.grid(row=4,column=2,columnspan=50,sticky='sw')
             print(self.path_JPEGImages)
             try:
@@ -4152,10 +4153,10 @@ class App:
                 self.open_originals_with_labelImg_button.destroy()
             except:
                 pass
-            self.open_originals_with_labelImg_button=Button(self.root,image=self.icon_labelImg,command=self.open_originals_with_labelImg_START,bg=self.root_bg,fg=self.root_fg)
-            self.open_originals_with_labelImg_button.grid(row=2,column=29,sticky='se')
-            self.open_originals_with_labelImg_note=tk.Label(self.root,text='12. \n Open originals w/ labelImg.py',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
-            self.open_originals_with_labelImg_note.grid(row=3,column=29,sticky='ne')
+            self.open_originals_with_labelImg_button=Button(self.frame_table,image=self.icon_labelImg,command=self.open_originals_with_labelImg_START,bg=self.root_bg,fg=self.root_fg)
+            self.open_originals_with_labelImg_button.grid(row=2+10,column=29,sticky='se',padx=20)
+            self.open_originals_with_labelImg_note=tk.Label(self.frame_table,text='12. \n Open originals w/ labelImg.py',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+            self.open_originals_with_labelImg_note.grid(row=3+10,column=29,sticky='ne',padx=20)
 
     def create_move_Anno_JPEG(self):
         if os.path.basename(self.path_Annotations)!="Annotations":
@@ -4216,9 +4217,9 @@ class App:
             self.labelImg=Thread(target=self.run_cmd,args=(self.cmd_i,)).start()
         else:
             self.popup_text='Please provide a valid labelImg.py path. \n  Current path is: {}'.format(self.path_labelImg)
-            self.fix_with_labelImg_error=tk.Label(self.root,text=self.popup_text, bg=self.root_bg,fg=self.root_fg,font=("Arial", 8))
+            self.fix_with_labelImg_error=tk.Label(self.frame_table,text=self.popup_text, bg=self.root_bg,fg=self.root_fg,font=("Arial", 8))
             self.fix_with_labelImg_error.grid(row=15,column=2,sticky='s')
-            self.fix_with_labelImg_error_button=Button(self.root,image=self.icon_folder, command=partial(self.select_file,self.path_labelImg),bg=self.root_bg,fg=self.root_fg)
+            self.fix_with_labelImg_error_button=Button(self.frame_table,image=self.icon_folder, command=partial(self.select_file,self.path_labelImg),bg=self.root_bg,fg=self.root_fg)
             self.fix_with_labelImg_error_button.grid(row=14,column=2,sticky='s')
 
     def open_originals_with_labelImg(self):
@@ -4233,9 +4234,9 @@ class App:
             self.labelImg=Thread(target=self.run_cmd,args=(self.cmd_i,)).start()
         else:
             self.popup_text='Please provide a valid labelImg.py path. \n  Current path is: {}'.format(self.path_labelImg)
-            self.fix_with_labelImg_error=tk.Label(self.root,text=self.popup_text, bg=self.root_bg,fg=self.root_fg,font=("Arial", 8))
+            self.fix_with_labelImg_error=tk.Label(self.frame_table,text=self.popup_text, bg=self.root_bg,fg=self.root_fg,font=("Arial", 8))
             self.fix_with_labelImg_error.grid(row=23,column=32,sticky='s')
-            self.fix_with_labelImg_error_button=Button(self.root,image=self.icon_folder, command=partial(self.select_file_START,self.path_labelImg),bg=self.root_bg,fg=self.root_fg)
+            self.fix_with_labelImg_error_button=Button(self.frame_table,image=self.icon_folder, command=partial(self.select_file_START,self.path_labelImg),bg=self.root_bg,fg=self.root_fg)
             self.fix_with_labelImg_error_button.grid(row=22,column=32,sticky='s')
 
     def open_originals_with_labelImg_START(self):
@@ -4251,9 +4252,9 @@ class App:
             self.labelImg=Thread(target=self.run_cmd,args=(self.cmd_i,)).start()
         else:
             self.popup_text='Please provide a valid labelImg.py path. \n  Current path is: {}'.format(self.path_labelImg)
-            self.fix_with_labelImg_error=tk.Label(self.root,text=self.popup_text, bg=self.root_bg,fg=self.root_fg,font=("Arial", 8))
+            self.fix_with_labelImg_error=tk.Label(self.frame_table,text=self.popup_text, bg=self.root_bg,fg=self.root_fg,font=("Arial", 8))
             self.fix_with_labelImg_error.grid(row=3,column=28,sticky='s')
-            self.fix_with_labelImg_error_button=Button(self.root,image=self.icon_folder, command=partial(self.select_file_START,self.path_labelImg),bg=self.root_bg,fg=self.root_fg)
+            self.fix_with_labelImg_error_button=Button(self.frame_table,image=self.icon_folder, command=partial(self.select_file_START,self.path_labelImg),bg=self.root_bg,fg=self.root_fg)
             self.fix_with_labelImg_error_button.grid(row=4,column=28,sticky='s')
 
     def pad(self,text_i,max_i):
@@ -4311,8 +4312,8 @@ class App:
             self.open_anno_label.destroy()
             del self.open_anno_label
             cmd_i=open_cmd+" '{}'".format(self.open_anno_label_var.get())
-            self.open_anno_label=Button(self.root,textvariable=self.open_anno_label_var, command=partial(self.run_cmd,cmd_i),bg=self.root_fg,fg=self.root_bg,font=("Arial", 8))
-            #self.open_anno_label=tk.Label(self.root,textvariable=self.open_anno_label_var)
+            self.open_anno_label=Button(self.frame_table,textvariable=self.open_anno_label_var, command=partial(self.run_cmd,cmd_i),bg=self.root_fg,fg=self.root_bg,font=("Arial", 8))
+            #self.open_anno_label=tk.Label(self.frame_table,textvariable=self.open_anno_label_var)
             self.open_anno_label.grid(row=2,column=2,columnspan=50,sticky='sw')
             self.path_Annotations=self.foldername
             print(self.path_Annotations)
@@ -4322,22 +4323,22 @@ class App:
             self.open_jpeg_label.destroy()
             del self.open_jpeg_label
             cmd_i=open_cmd+" '{}'".format(self.open_jpeg_label_var.get())
-            self.open_jpeg_label=Button(self.root,textvariable=self.open_jpeg_label_var, command=partial(self.run_cmd,cmd_i),bg=self.root_fg,fg=self.root_bg,font=("Arial", 8))
-            #self.open_jpeg_label=tk.Label(self.root,textvariable=self.open_jpeg_label_var)
+            self.open_jpeg_label=Button(self.frame_table,textvariable=self.open_jpeg_label_var, command=partial(self.run_cmd,cmd_i),bg=self.root_fg,fg=self.root_bg,font=("Arial", 8))
+            #self.open_jpeg_label=tk.Label(self.frame_table,textvariable=self.open_jpeg_label_var)
             self.open_jpeg_label.grid(row=4,column=2,columnspan=50,sticky='sw')
             self.path_JPEGImages=self.foldername
             print(self.path_JPEGImages)
         if os.path.exists(self.path_JPEGImages) and os.path.exists(self.path_Annotations) and self.jpeg_selected and self.anno_selected:
             self.MOSAIC=MOSAIC(self.path_JPEGImages,self.path_Annotations)
             if os.path.exists(self.MOSAIC.df_filename)==True:
-                self.load_df_button=Button(self.root,image=self.icon_load,command=self.load_df,bg=self.root_bg,fg=self.root_fg)
+                self.load_df_button=Button(self.frame_table,image=self.icon_load,command=self.load_df,bg=self.root_bg,fg=self.root_fg)
                 self.load_df_button.grid(row=8,column=1,sticky='se')
-                self.load_note=tk.Label(self.root,text='3. \n Load df     ',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+                self.load_note=tk.Label(self.frame_table,text='3. \n Load df     ',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
                 self.load_note.grid(row=9,column=1,sticky='ne')
                 
-            self.create_df_button=Button(self.root,image=self.icon_create,command=self.create_df,bg=self.root_bg,fg=self.root_fg)
+            self.create_df_button=Button(self.frame_table,image=self.icon_create,command=self.create_df,bg=self.root_bg,fg=self.root_fg)
             self.create_df_button.grid(row=6,column=1,sticky='se')
-            self.create_note=tk.Label(self.root,text='2. \n Create df    ',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+            self.create_note=tk.Label(self.frame_table,text='2. \n Create df    ',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
             self.create_note.grid(row=7,column=1,sticky='ne')
 
     def run_cmd(self,cmd_i):
@@ -4362,32 +4363,32 @@ class App:
         
         self.not_checked=self.MOSAIC.not_checked.get()
         self.not_checked="Not Checked '{}' Total = {}".format(self.target_i.get(),self.not_checked)
-        self.not_checked_label=tk.Label(self.root,text=self.not_checked, bg=self.root_fg,fg=self.root_bg,font=("Arial", 10))
+        self.not_checked_label=tk.Label(self.frame_table,text=self.not_checked, bg=self.root_fg,fg=self.root_bg,font=("Arial", 10))
         self.not_checked_label.grid(row=10,column=4,sticky='w')
 
         self.checked_good=self.MOSAIC.checked_good.get()
         self.checked_good="Checked '{}' Good = {}".format(self.target_i.get(),self.checked_good)
-        self.checked_label_good=tk.Label(self.root,text=self.checked_good, bg=self.root_fg,fg=self.root_bg,font=("Arial", 10))
+        self.checked_label_good=tk.Label(self.frame_table,text=self.checked_good, bg=self.root_fg,fg=self.root_bg,font=("Arial", 10))
         self.checked_label_good.grid(row=10,column=5,sticky='w')
 
         self.checked_bad=self.MOSAIC.checked_bad.get()
         self.checked_bad="Checked '{}' Bad = {}".format(self.target_i.get(),self.checked_bad)
-        self.checked_label_bad=tk.Label(self.root,text=self.checked_bad, bg=self.root_fg,fg=self.root_bg,font=("Arial", 10))
+        self.checked_label_bad=tk.Label(self.frame_table,text=self.checked_bad, bg=self.root_fg,fg=self.root_bg,font=("Arial", 10))
         self.checked_label_bad.grid(row=10,column=6,sticky='w')
 
         self.total_not_checked=self.MOSAIC.total_not_checked.get()
         self.total_not_checked="Not Checked Total = {}".format(self.total_not_checked)
-        self.total_not_checked_label=tk.Label(self.root,text=self.total_not_checked, bg=self.root_bg,fg=self.root_fg,font=("Arial", 10))
+        self.total_not_checked_label=tk.Label(self.frame_table,text=self.total_not_checked, bg=self.root_bg,fg=self.root_fg,font=("Arial", 10))
         self.total_not_checked_label.grid(row=9,column=4,sticky='w')
 
         self.total_checked_good=self.MOSAIC.total_checked_good.get()
         self.total_checked_good="Checked Good = {}".format(self.total_checked_good)
-        self.total_checked_label_good=tk.Label(self.root,text=self.total_checked_good, bg=self.root_bg,fg=self.root_fg,font=("Arial", 10))
+        self.total_checked_label_good=tk.Label(self.frame_table,text=self.total_checked_good, bg=self.root_bg,fg=self.root_fg,font=("Arial", 10))
         self.total_checked_label_good.grid(row=9,column=5,sticky='w')
 
         self.total_checked_bad=self.MOSAIC.total_checked_bad.get()
         self.total_checked_bad="Checked Bad = {}".format(self.total_checked_bad)
-        self.total_checked_label_bad=tk.Label(self.root,text=self.total_checked_bad, bg=self.root_bg,fg=self.root_fg,font=("Arial", 10))
+        self.total_checked_label_bad=tk.Label(self.frame_table,text=self.total_checked_bad, bg=self.root_bg,fg=self.root_fg,font=("Arial", 10))
         self.total_checked_label_bad.grid(row=9,column=6,sticky='w')
         
         self.MOSAIC.update_fix()
@@ -4397,17 +4398,17 @@ class App:
 
         self.annos_to_fix="Annos to fix = {}".format(self.annos_to_fix)
         cmd_i=open_cmd+" '{}'".format(self.MOSAIC.path_Annotations_tofix)
-        self.annos_to_fix_label=Button(self.root,text=self.annos_to_fix, command=partial(self.run_cmd,cmd_i),bg=self.root_bg,fg=self.root_fg,font=("Arial", 10))
+        self.annos_to_fix_label=Button(self.frame_table,text=self.annos_to_fix, command=partial(self.run_cmd,cmd_i),bg=self.root_bg,fg=self.root_fg,font=("Arial", 10))
         self.annos_to_fix_label.grid(row=11,column=4,sticky='w')
 
         self.jpegs_to_fix="JPEGS to fix = {}".format(self.jpegs_to_fix)
         cmd_i=open_cmd+" '{}'".format(self.MOSAIC.path_JPEGImages_tofix)
-        self.jpegs_to_fix_label=Button(self.root,text=self.jpegs_to_fix, command=partial(self.run_cmd,cmd_i),bg=self.root_bg,fg=self.root_fg,font=("Arial", 10))
+        self.jpegs_to_fix_label=Button(self.frame_table,text=self.jpegs_to_fix, command=partial(self.run_cmd,cmd_i),bg=self.root_bg,fg=self.root_fg,font=("Arial", 10))
         self.jpegs_to_fix_label.grid(row=11,column=5,sticky='w')
 
         self.jpegs_to_fix_bbox="JPEGS to fix bbox = {}".format(self.jpegs_to_fix_bbox)
         cmd_i=open_cmd+" '{}'".format(self.MOSAIC.path_JPEGImages_tofix_bbox)
-        self.jpegs_to_fix_bbox_label=Button(self.root,text=self.jpegs_to_fix_bbox, command=partial(self.run_cmd,cmd_i),bg=self.root_bg,fg=self.root_fg,font=("Arial", 10))
+        self.jpegs_to_fix_bbox_label=Button(self.frame_table,text=self.jpegs_to_fix_bbox, command=partial(self.run_cmd,cmd_i),bg=self.root_bg,fg=self.root_fg,font=("Arial", 10))
         self.jpegs_to_fix_bbox_label.grid(row=11,column=6,sticky='w')
 
 
@@ -4421,15 +4422,15 @@ class App:
 
     def update_targets(self):
         self.drop_targets.destroy()
-        self.drop_targets=tk.OptionMenu(self.root,self.target_i,*self.options,command=self.update_counts)
+        self.drop_targets=tk.OptionMenu(self.frame_table,self.target_i,*self.options,command=self.update_counts)
         self.drop_targets.grid(row=10,column=2,sticky='s')
     def create_df(self):
         self.MOSAIC=MOSAIC(self.path_JPEGImages,self.path_Annotations)
         self.MOSAIC.create_df()
         if os.path.exists(self.MOSAIC.df_filename)==True:
-            self.load_df_button=Button(self.root,image=self.icon_load,command=self.load_df,bg=self.root_bg,fg=self.root_fg)
+            self.load_df_button=Button(self.frame_table,image=self.icon_load,command=self.load_df,bg=self.root_bg,fg=self.root_fg)
             self.load_df_button.grid(row=8,column=1,sticky='se')
-            self.load_note=tk.Label(self.root,text='3. \n Load df     ',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+            self.load_note=tk.Label(self.frame_table,text='3. \n Load df     ',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
             self.load_note.grid(row=9,column=1,sticky='ne')
         self.load_df()
     def load_df(self):
@@ -4439,61 +4440,61 @@ class App:
         self.target_i.set(self.options[0])
         self.MOSAIC_NUM_VAR=tk.StringVar()
         self.MOSAIC_NUM_VAR.set(self.MOSAIC_NUM)
-        self.MOSAIC_NUM_entry=tk.Entry(self.root,textvariable=self.MOSAIC_NUM_VAR)
+        self.MOSAIC_NUM_entry=tk.Entry(self.frame_table,textvariable=self.MOSAIC_NUM_VAR)
         self.MOSAIC_NUM_entry.grid(row=10,column=3,sticky='sw')
-        self.MOSAIC_NUM_label=tk.Label(self.root,text='MOSAIC_NUM',bg=self.root_bg,fg=self.root_fg,font=('Arial',7))
+        self.MOSAIC_NUM_label=tk.Label(self.frame_table,text='MOSAIC_NUM',bg=self.root_bg,fg=self.root_fg,font=('Arial',7))
         self.MOSAIC_NUM_label.grid(row=11,column=3,sticky='nw')
 
         self.update_counts('na')
         
         if self.drop_targets==None:
-            self.drop_targets=tk.OptionMenu(self.root,self.target_i,*self.options,command=self.update_counts)
+            self.drop_targets=tk.OptionMenu(self.frame_table,self.target_i,*self.options,command=self.update_counts)
             self.drop_targets.grid(row=10,column=2,sticky='s')
-            self.drop_label=tk.Label(self.root,text='target',bg=self.root_bg,fg=self.root_fg,font=('Arial',7))
+            self.drop_label=tk.Label(self.frame_table,text='target',bg=self.root_bg,fg=self.root_fg,font=('Arial',7))
             self.drop_label.grid(row=11,column=2,sticky='nw')
         else:
             self.update_targets()
-        self.analyze_target_button=Button(self.root,image=self.icon_analyze,command=self.analyze_target,bg=self.root_bg,fg=self.root_fg)
+        self.analyze_target_button=Button(self.frame_table,image=self.icon_analyze,command=self.analyze_target,bg=self.root_bg,fg=self.root_fg)
         self.analyze_target_button.grid(row=10,column=1,sticky='se')
-        self.analyze_note=tk.Label(self.root,text='4. \n Analyze Mosaic',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.analyze_note=tk.Label(self.frame_table,text='4. \n Analyze Mosaic',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.analyze_note.grid(row=11,column=1,sticky='ne')
 
 
-        self.move_fix_button=Button(self.root,image=self.icon_move,command=self.move_fix,bg=self.root_bg,fg=self.root_fg)
+        self.move_fix_button=Button(self.frame_table,image=self.icon_move,command=self.move_fix,bg=self.root_bg,fg=self.root_fg)
         self.move_fix_button.grid(row=12,column=1,sticky='se')
-        self.move_fix_note=tk.Label(self.root,text='5. \n Move Fix',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.move_fix_note=tk.Label(self.frame_table,text='5. \n Move Fix',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.move_fix_note.grid(row=13,column=1,sticky='ne')
 
-        self.fix_with_labelImg_button=Button(self.root,image=self.icon_labelImg,command=self.fix_with_labelImg,bg=self.root_bg,fg=self.root_fg)
+        self.fix_with_labelImg_button=Button(self.frame_table,image=self.icon_labelImg,command=self.fix_with_labelImg,bg=self.root_bg,fg=self.root_fg)
         self.fix_with_labelImg_button.grid(row=14,column=1,sticky='se')
-        self.fix_labelImg_note=tk.Label(self.root,text='6. \n Fix w/ labelImg.py',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.fix_labelImg_note=tk.Label(self.frame_table,text='6. \n Fix w/ labelImg.py',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.fix_labelImg_note.grid(row=15,column=1,sticky='ne')
 
 
-        self.merge_fix_button=Button(self.root,image=self.icon_merge,command=self.merge_fix,bg=self.root_bg,fg=self.root_fg)
+        self.merge_fix_button=Button(self.frame_table,image=self.icon_merge,command=self.merge_fix,bg=self.root_bg,fg=self.root_fg)
         self.merge_fix_button.grid(row=16,column=1,sticky='se')
-        self.merge_fix_note=tk.Label(self.root,text='7. \n Merge Fix',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.merge_fix_note=tk.Label(self.frame_table,text='7. \n Merge Fix',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.merge_fix_note.grid(row=17,column=1,sticky='ne')
 
-        self.clear_fix_button=Button(self.root,image=self.icon_clear_fix,command=self.clear_fix,bg=self.root_bg,fg=self.root_fg)
+        self.clear_fix_button=Button(self.frame_table,image=self.icon_clear_fix,command=self.clear_fix,bg=self.root_bg,fg=self.root_fg)
         self.clear_fix_button.grid(row=18,column=1,sticky='se')
-        self.clear_fix_note=tk.Label(self.root,text='8. \n Clear Fix',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.clear_fix_note=tk.Label(self.frame_table,text='8. \n Clear Fix',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.clear_fix_note.grid(row=19,column=1,sticky='ne')
 
 
-        self.clear_checked_button=Button(self.root,image=self.icon_clear_checked,command=self.clear_checked,bg=self.root_bg,fg=self.root_fg)
+        self.clear_checked_button=Button(self.frame_table,image=self.icon_clear_checked,command=self.clear_checked,bg=self.root_bg,fg=self.root_fg)
         self.clear_checked_button.grid(row=20,column=1,sticky='se')
-        self.clear_checked_note=tk.Label(self.root,text='9. \n Clear Checked',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.clear_checked_note=tk.Label(self.frame_table,text='9. \n Clear Checked',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.clear_checked_note.grid(row=21,column=1,sticky='ne')
 
-        self.breakupDF_button=Button(self.root,image=self.icon_breakup,command=self.breakup_df,bg=self.root_bg,fg=self.root_fg)
+        self.breakupDF_button=Button(self.frame_table,image=self.icon_breakup,command=self.breakup_df,bg=self.root_bg,fg=self.root_fg)
         self.breakupDF_button.grid(row=20,column=30,sticky='se')
-        self.breakupDF_note=tk.Label(self.root,text='10. \n Breakup df',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.breakupDF_note=tk.Label(self.frame_table,text='10. \n Breakup df',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.breakupDF_note.grid(row=21,column=30,sticky='ne')
 
-        self.UMAP_button=Button(self.root,image=self.icon_map,command=self.umap_update,bg=self.root_bg,fg=self.root_fg)
+        self.UMAP_button=Button(self.frame_table,image=self.icon_map,command=self.umap_update,bg=self.root_bg,fg=self.root_fg)
         self.UMAP_button.grid(row=20,column=31,sticky='se')
-        self.UMAP_note=tk.Label(self.root,text='11. \n UMAP',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.UMAP_note=tk.Label(self.frame_table,text='11. \n UMAP',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.UMAP_note.grid(row=21,column=31,sticky='ne')
         try:
             self.open_originals_with_labelImg_note.destroy()
@@ -4503,92 +4504,92 @@ class App:
             self.open_originals_with_labelImg_button.destroy()
         except:
             pass
-        self.open_originals_with_labelImg_button=Button(self.root,image=self.icon_labelImg,command=self.open_originals_with_labelImg,bg=self.root_bg,fg=self.root_fg)
+        self.open_originals_with_labelImg_button=Button(self.frame_table,image=self.icon_labelImg,command=self.open_originals_with_labelImg,bg=self.root_bg,fg=self.root_fg)
         self.open_originals_with_labelImg_button.grid(row=20,column=32,sticky='se')
-        self.open_originals_with_labelImg_note=tk.Label(self.root,text='12. \n Open originals w/ labelImg.py',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.open_originals_with_labelImg_note=tk.Label(self.frame_table,text='12. \n Open originals w/ labelImg.py',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.open_originals_with_labelImg_note.grid(row=21,column=32,sticky='ne')
 
         self.DX_MIN_VAR=tk.StringVar()
         self.DX_MIN_VAR.set(str(self.MOSAIC.DX_MIN))
-        self.DX_MIN_entry=tk.Entry(self.root,textvariable=self.DX_MIN_VAR)
+        self.DX_MIN_entry=tk.Entry(self.frame_table,textvariable=self.DX_MIN_VAR)
         self.DX_MIN_entry.grid(row=5,column=30,sticky='sw')
-        self.DX_MIN_label=tk.Label(self.root,text='DX_MIN',bg=self.root_bg,fg=self.root_fg,font=('Arial',7))
+        self.DX_MIN_label=tk.Label(self.frame_table,text='DX_MIN',bg=self.root_bg,fg=self.root_fg,font=('Arial',7))
         self.DX_MIN_label.grid(row=6,column=30,sticky='nw')
 
         self.DX_MAX_VAR=tk.StringVar()
         self.DX_MAX_VAR.set(str(self.MOSAIC.DX_MAX))
-        self.DX_MAX_entry=tk.Entry(self.root,textvariable=self.DX_MAX_VAR)
+        self.DX_MAX_entry=tk.Entry(self.frame_table,textvariable=self.DX_MAX_VAR)
         self.DX_MAX_entry.grid(row=7,column=30,sticky='sw')
-        self.DX_MAX_label=tk.Label(self.root,text='DX_MAX',bg=self.root_bg,fg=self.root_fg,font=('Arial',7))
+        self.DX_MAX_label=tk.Label(self.frame_table,text='DX_MAX',bg=self.root_bg,fg=self.root_fg,font=('Arial',7))
         self.DX_MAX_label.grid(row=8,column=30,sticky='nw')
 
         self.DY_MIN_VAR=tk.StringVar()
         self.DY_MIN_VAR.set(str(self.MOSAIC.DY_MIN))
-        self.DY_MIN_entry=tk.Entry(self.root,textvariable=self.DY_MIN_VAR)
+        self.DY_MIN_entry=tk.Entry(self.frame_table,textvariable=self.DY_MIN_VAR)
         self.DY_MIN_entry.grid(row=9,column=30,sticky='sw')
-        self.DY_MIN_label=tk.Label(self.root,text='DY_MIN',bg=self.root_bg,fg=self.root_fg,font=('Arial',7))
+        self.DY_MIN_label=tk.Label(self.frame_table,text='DY_MIN',bg=self.root_bg,fg=self.root_fg,font=('Arial',7))
         self.DY_MIN_label.grid(row=10,column=30,sticky='nw')
 
         self.DY_MAX_VAR=tk.StringVar()
         self.DY_MAX_VAR.set(str(self.MOSAIC.DY_MAX))
-        self.DY_MAX_entry=tk.Entry(self.root,textvariable=self.DY_MAX_VAR)
+        self.DY_MAX_entry=tk.Entry(self.frame_table,textvariable=self.DY_MAX_VAR)
         self.DY_MAX_entry.grid(row=11,column=30,sticky='sw')
-        self.DY_MAX_label=tk.Label(self.root,text='DY_MAX',bg=self.root_bg,fg=self.root_fg,font=('Arial',7))
+        self.DY_MAX_label=tk.Label(self.frame_table,text='DY_MAX',bg=self.root_bg,fg=self.root_fg,font=('Arial',7))
         self.DY_MAX_label.grid(row=12,column=30,sticky='nw')
 
-        self.plot_DXDY_button=Button(self.root,image=self.icon_scatter,command=self.MOSAIC.plot_dx_dy,bg=self.root_bg,fg=self.root_fg)
+        self.plot_DXDY_button=Button(self.frame_table,image=self.icon_scatter,command=self.MOSAIC.plot_dx_dy,bg=self.root_bg,fg=self.root_fg)
         self.plot_DXDY_button.grid(row=5,column=31,sticky='se')
-        self.plot_DXDY_note=tk.Label(self.root,text='13. \n Plot DX vs. DY',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.plot_DXDY_note=tk.Label(self.frame_table,text='13. \n Plot DX vs. DY',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.plot_DXDY_note.grid(row=6,column=31,sticky='ne')
         #self.plot_dx_dy(self)
 
-        self.plot_DXDY_filter_button=Button(self.root,image=self.icon_filter,command=self.get_DXDY,bg=self.root_bg,fg=self.root_fg)
+        self.plot_DXDY_filter_button=Button(self.frame_table,image=self.icon_filter,command=self.get_DXDY,bg=self.root_bg,fg=self.root_fg)
         self.plot_DXDY_filter_button.grid(row=7,column=31,sticky='se')
-        self.plot_DXDY_filter_note=tk.Label(self.root,text='14. \n Filter DX,DY',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.plot_DXDY_filter_note=tk.Label(self.frame_table,text='14. \n Filter DX,DY',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.plot_DXDY_filter_note.grid(row=8,column=31,sticky='ne')
 
-        self.make_chips_button=Button(self.root,image=self.icon_create,command=self.make_chips,bg=self.root_bg,fg=self.root_fg)
+        self.make_chips_button=Button(self.frame_table,image=self.icon_create,command=self.make_chips,bg=self.root_bg,fg=self.root_fg)
         self.make_chips_button.grid(row=9,column=31,sticky='se')
-        self.make_chips_note=tk.Label(self.root,text='15. \n Make Chips',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.make_chips_note=tk.Label(self.frame_table,text='15. \n Make Chips',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.make_chips_note.grid(row=10,column=31,sticky='ne')
 
         self.checkbutton_blanks()
-        self.make_blank_chips_note=tk.Label(self.root,text='Make Blank Chips?',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.make_blank_chips_note=tk.Label(self.frame_table,text='Make Blank Chips?',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.make_blank_chips_note.grid(row=10,column=32,sticky='ne')
 
-        self.change_labels_button=Button(self.root,image=self.icon_create,command=self.change_labels,bg=self.root_bg,fg=self.root_fg)
+        self.change_labels_button=Button(self.frame_table,image=self.icon_create,command=self.change_labels,bg=self.root_bg,fg=self.root_fg)
         self.change_labels_button.grid(row=11,column=31,sticky='se')
-        self.change_labels_note=tk.Label(self.root,text='16. \n Change Labels',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.change_labels_note=tk.Label(self.frame_table,text='16. \n Change Labels',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.change_labels_note.grid(row=12,column=31,sticky='ne') 
 
-        self.remove_blanks_button=Button(self.root,image=self.icon_clear_fix,command=self.remove_blanks,bg=self.root_bg,fg=self.root_fg)
+        self.remove_blanks_button=Button(self.frame_table,image=self.icon_clear_fix,command=self.remove_blanks,bg=self.root_bg,fg=self.root_fg)
         self.remove_blanks_button.grid(row=13,column=31,sticky='se')
-        self.remove_blanks_note=tk.Label(self.root,text='17. \n Remove Blanks',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.remove_blanks_note=tk.Label(self.frame_table,text='17. \n Remove Blanks',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.remove_blanks_note.grid(row=14,column=31,sticky='ne')    
 
-        self.look_at_objects_button=Button(self.root,image=self.icon_analyze,command=self.look_at_objects,bg=self.root_bg,fg=self.root_fg)
+        self.look_at_objects_button=Button(self.frame_table,image=self.icon_analyze,command=self.look_at_objects,bg=self.root_bg,fg=self.root_fg)
         self.look_at_objects_button.grid(row=15,column=31,sticky='se')
-        self.look_at_objects_note=tk.Label(self.root,text='18. \n Look at Objects',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.look_at_objects_note=tk.Label(self.frame_table,text='18. \n Look at Objects',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.look_at_objects_note.grid(row=16,column=31,sticky='ne') 
 
-        self.create_new_df_button=Button(self.root,image=self.icon_create,command=self.create_new_df,bg=self.root_bg,fg=self.root_fg)
+        self.create_new_df_button=Button(self.frame_table,image=self.icon_create,command=self.create_new_df,bg=self.root_bg,fg=self.root_fg)
         self.create_new_df_button.grid(row=17,column=31,sticky='se')
-        self.create_new_df_note=tk.Label(self.root,text='19. \n Create New Dataset',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.create_new_df_note=tk.Label(self.frame_table,text='19. \n Create New Dataset',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.create_new_df_note.grid(row=18,column=31,sticky='ne')       
 
-        self.create_blackpatches_button=Button(self.root,image=self.icon_create,command=self.create_blackpatches,bg=self.root_bg,fg=self.root_fg)
+        self.create_blackpatches_button=Button(self.frame_table,image=self.icon_create,command=self.create_blackpatches,bg=self.root_bg,fg=self.root_fg)
         self.create_blackpatches_button.grid(row=13,column=32,sticky='se')
-        self.create_blackpatches_note=tk.Label(self.root,text='20. \n Create Black Patches',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.create_blackpatches_note=tk.Label(self.frame_table,text='20. \n Create Black Patches',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.create_blackpatches_note.grid(row=14,column=32,sticky='ne')   
 
-        self.create_fakepatches_button=Button(self.root,image=self.icon_create,command=self.create_fakepatches,bg=self.root_bg,fg=self.root_fg)
+        self.create_fakepatches_button=Button(self.frame_table,image=self.icon_create,command=self.create_fakepatches,bg=self.root_bg,fg=self.root_fg)
         self.create_fakepatches_button.grid(row=17,column=32,sticky='se')
-        self.create_fakepatches_note=tk.Label(self.root,text='21. \n Create New Dataset \n with Random Backgrounds',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        self.create_fakepatches_note=tk.Label(self.frame_table,text='21. \n Create New Dataset \n with Random Backgrounds',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.create_fakepatches_note.grid(row=18,column=32,sticky='ne') 
 
-        # self.set_difficult_button=Button(self.root,image=self.icon_create,command=self.set_difficult,bg=self.root_bg,fg=self.root_fg)
+        # self.set_difficult_button=Button(self.frame_table,image=self.icon_create,command=self.set_difficult,bg=self.root_bg,fg=self.root_fg)
         # self.set_difficult_button.grid(row=15,column=32,sticky='se')
-        # self.set_difficult_note=tk.Label(self.root,text='21. \n Set Difficulty',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        # self.set_difficult_note=tk.Label(self.frame_table,text='21. \n Set Difficulty',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         # self.set_difficult_note.grid(row=16,column=32,sticky='ne') 
 
     def checkbutton_blanks(self):
@@ -4597,9 +4598,9 @@ class App:
         self.style3.configure('Normal.TRadiobutton',
                              background='green',
                              foreground='black')
-        self.option_yes = ttk.Radiobutton(self.root, text="Yes", style='Normal.TRadiobutton',variable=self.BLANK_boolean_var,
+        self.option_yes = ttk.Radiobutton(self.frame_table, text="Yes", style='Normal.TRadiobutton',variable=self.BLANK_boolean_var,
                                          value=True, command=self.callback_yes_no)
-        self.option_no = ttk.Radiobutton(self.root, text="No", style='Normal.TRadiobutton', variable=self.BLANK_boolean_var,
+        self.option_no = ttk.Radiobutton(self.frame_table, text="No", style='Normal.TRadiobutton', variable=self.BLANK_boolean_var,
                                         value=False, command=self.callback_yes_no)
         self.option_yes.grid(row=10, column=33,sticky='ne')
         self.option_no.grid(row=10, column=34,sticky='nw')
@@ -4689,13 +4690,70 @@ class App:
         self.MOSAIC.look_at_objects()
         self.load_df()
         self.update_counts('na')
+    # def get_update_background_img(self):
+    #     self.image=Image.open(self.root_background_img)
+    #     self.image=self.image.resize((self.root_W,self.root_H),Image.ANTIALIAS)
+    #     self.bg=ImageTk.PhotoImage(self.image)
+    #     self.canvas=tk.Canvas(self.frame_table,width=self.root_W,height=self.root_H)
+    #     self.canvas.grid(row=0,column=0,columnspan=self.canvas_columnspan,rowspan=self.canvas_rowspan,sticky='nw')
+    #     self.canvas.create_image(0,0,image=self.bg,anchor='nw')
     def get_update_background_img(self):
+        global frame_table
         self.image=Image.open(self.root_background_img)
         self.image=self.image.resize((self.root_W,self.root_H),Image.ANTIALIAS)
         self.bg=ImageTk.PhotoImage(self.image)
-        self.canvas=tk.Canvas(self.root,width=self.root_W,height=self.root_H)
-        self.canvas.grid(row=0,column=0,columnspan=self.canvas_columnspan,rowspan=self.canvas_rowspan,sticky='nw')
-        self.canvas.create_image(0,0,image=self.bg,anchor='nw')
+        # self.canvas_og=tk.Canvas(self.frame_table1,width=self.root_W,height=self.root_H)
+        # self.canvas_og.grid(row=0,column=0,columnspan=self.canvas_columnspan,rowspan=self.canvas_rowspan,sticky='nw')
+        # self.canvas_og.create_image(0,0,image=self.bg,anchor='nw')
+        self.root.columnconfigure(0,weight=1)
+        self.root.rowconfigure(0,weight=1)
+        self.FMas=tk.Frame(self.root,bg='Black')
+        self.FMas.grid(sticky=(tk.N,tk.E,tk.S,tk.W),padx=20,pady=20)
+        self.FMas.columnconfigure(0,weight=1)
+        self.frame_canvas=tk.Frame(self.FMas)
+        self.frame_canvas.grid(row=0,column=0,sticky='nw')
+        self.frame_canvas.grid_rowconfigure(0,weight=1)
+        self.frame_canvas.grid_columnconfigure(0,weight=1)
+        self.frame_canvas.grid_propagate(False)
+
+        self.canvas=tk.Canvas(self.frame_canvas,bg='black')
+        self.canvas.grid(row=0,column=0,sticky='news')
+        self.label = tk.Label(self.canvas, image = self.bg)
+        self.label.grid(row=0,column=0,sticky='news')
+        self.style3=ttk.Style()
+        self.style3.configure('Vertical.TScrollbar',
+                            background='red',
+                            foreground='black',
+                            arrowcolor='black',
+                            activebackground='yellow')
+        self.style3.configure('Horizontal.TScrollbar',
+                            background='red',
+                            foreground='black',
+                            arrowcolor='black',
+                            activebackground='yellow')
+        self.vsbar=ttk.Scrollbar(self.frame_canvas,orient="vertical",command=self.canvas.yview,style="Vertical.TScrollbar")
+        self.vsbar.grid(row=0,column=1,sticky='nes',pady=1)
+        self.hsbar=ttk.Scrollbar(self.frame_canvas,orient="horizontal",command=self.canvas.xview,style="Horizontal.TScrollbar")
+
+        self.hsbar.grid(row=0,column=0,sticky='new',padx=1)
+        self.canvas.configure(yscrollcommand=self.vsbar.set)
+        self.canvas.configure(xscrollcommand=self.hsbar.set)
+        self.frame_table=tk.Frame(self.canvas,bg='black',padx=20,pady=20)
+
+        self.canvas.create_window((0,0),window=self.frame_table,anchor='nw')
+
+
+        total_width=self.root_W*1.#080#width_i+width_j+self.hsbar.winfo_width()
+        total_height=self.root_H*1.#height_i+height_j+self.vsbar.winfo_height()
+        # Create a Label Widget to display the text or Image
+
+        self.canvas.create_image((total_width*0.75,total_height*0.75),image=self.bg,anchor='nw')
+        print('total_width',total_width)
+        print('total_height',total_height)
+        self.frame_canvas.config(width=total_width,height=total_height)
+        self.canvas.config(scrollregion=self.canvas.bbox('all'))
+        frame_table=self.frame_table
+
 
 
 if __name__=='__main__':
