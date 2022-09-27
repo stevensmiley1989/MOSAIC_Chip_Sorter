@@ -173,6 +173,59 @@ ROOT_W=int(root_tk.winfo_screenwidth()*0.95)
 print('ROOT_H',ROOT_H)
 print('ROOT_W',ROOT_W)
 from pandastable import Table, TableModel
+class CreateToolTip(object):
+    """
+    https://stackoverflow.com/questions/3221956/how-do-i-display-tooltips-in-tkinter
+    create a tooltip for a given widget
+    """
+    def __init__(self, widget, text='widget info'):
+        self.waittime = 500     #miliseconds
+        self.wraplength = 480   #pixels
+        self.widget = widget
+        self.text = text
+        self.widget.bind("<Enter>", self.enter)
+        self.widget.bind("<Leave>", self.leave)
+        self.widget.bind("<ButtonPress>", self.leave)
+        self.id = None
+        self.tw = None
+
+    def enter(self, event=None):
+        self.schedule()
+
+    def leave(self, event=None):
+        self.unschedule()
+        self.hidetip()
+
+    def schedule(self):
+        self.unschedule()
+        self.id = self.widget.after(self.waittime, self.showtip)
+
+    def unschedule(self):
+        id = self.id
+        self.id = None
+        if id:
+            self.widget.after_cancel(id)
+
+    def showtip(self, event=None):
+        x = y = 0
+        x, y, cx, cy = self.widget.bbox("insert")
+        x += self.widget.winfo_rootx() + 25
+        y += self.widget.winfo_rooty() + 20
+        # creates a toplevel window
+        self.tw = tk.Toplevel(self.widget)
+        # Leaves only the label and removes the app window
+        self.tw.wm_overrideredirect(True)
+        self.tw.wm_geometry("+%d+%d" % (x, y))
+        label = tk.Label(self.tw, text=self.text, justify='left',
+                       background="#ffffff", relief='solid', borderwidth=1,
+                       wraplength = self.wraplength)
+        label.pack(ipadx=1)
+
+    def hidetip(self):
+        tw = self.tw
+        self.tw= None
+        if tw:
+            tw.destroy()
 class TestApp(tk.Frame):
     def __init__(self, parent, filepath):
         super().__init__(parent)
@@ -4010,10 +4063,17 @@ class App:
         self.open_anno_button.grid(row=2,column=1,sticky='se')
         self.open_anno_note=tk.Label(self.frame_table,text="1.a \n Annotations dir",bg=self.root_bg,fg=self.root_fg,font=("Arial", 8))
         self.open_anno_note.grid(row=3,column=1,sticky='ne')
+        self.open_anno_button_tip=CreateToolTip(self.open_anno_button,'''
+        Set the path for your Annotations. \n\t 
+        This is where your Annotation files are located.  
+        ''')
 
         cmd_i=open_cmd+" '{}'".format(self.open_anno_label_var.get())
         self.open_anno_label=Button(self.frame_table,textvariable=self.open_anno_label_var, command=partial(self.run_cmd,cmd_i),bg=self.root_fg,fg=self.root_bg,font=("Arial", 8))
-
+        self.open_anno_label_tip=CreateToolTip(self.open_anno_label,'''
+        View the path for your Annotations. \n\t 
+        This is where your Annotations are located.  
+        ''')
         self.open_anno_label.grid(row=2,column=2,columnspan=50,sticky='sw')
 
         self.open_jpeg_label_var=tk.StringVar()
@@ -4023,6 +4083,10 @@ class App:
         self.open_jpeg_button.grid(row=4,column=1,sticky='se')
         self.open_jpeg_note=tk.Label(self.frame_table,text="1.b \n JPEGImages dir",bg=self.root_bg,fg=self.root_fg,font=("Arial", 8))
         self.open_jpeg_note.grid(row=5,column=1,sticky='ne')
+        self.open_jpeg_button_tip=CreateToolTip(self.open_jpeg_button,'''
+        Set the path for your JPEGImages. \n\t 
+        This is where your JPEGImages are located.  
+        ''')
 
         # self.open_video_label_var=tk.StringVar()
         # self.open_video_label_var.set(self.path_video)
@@ -4037,15 +4101,22 @@ class App:
         # self.open_video_label=Button(self.frame_table,textvariable=self.open_video_label_var, command=partial(self.run_cmd,cmd_i),bg=self.root_fg,fg=self.root_bg,font=("Arial", 8))
         # self.open_video_label.grid(row=2,column=32,columnspan=50,sticky='sw')    
 
-        # cmd_i=open_cmd+" '{}'".format(self.open_jpeg_label_var.get())
-        # self.open_jpeg_label=Button(self.frame_table,textvariable=self.open_jpeg_label_var, command=partial(self.run_cmd,cmd_i),bg=self.root_fg,fg=self.root_bg,font=("Arial", 8))
+        cmd_i=open_cmd+" '{}'".format(self.open_jpeg_label_var.get())
+        self.open_jpeg_label=Button(self.frame_table,textvariable=self.open_jpeg_label_var, command=partial(self.run_cmd,cmd_i),bg=self.root_fg,fg=self.root_bg,font=("Arial", 8))
+        self.open_jpeg_label_tip=CreateToolTip(self.open_jpeg_label,'''
+        View the path for your JPEGImages. \n\t 
+        This is where your JPEGImages are located.  
+        ''')
 
-        # self.open_jpeg_label.grid(row=4,column=2,columnspan=50,sticky='sw')
+        self.open_jpeg_label.grid(row=4,column=2,columnspan=50,sticky='sw')
         if os.path.exists(self.path_Annotations) and os.path.exists(self.path_JPEGImages):
             self.MOSAIC=MOSAIC(self.path_JPEGImages,self.path_Annotations)
             if os.path.exists(self.MOSAIC.df_filename)==True:
                 self.load_df_button=Button(self.frame_table,image=self.icon_load,command=self.load_df,bg=self.root_bg,fg=self.root_fg)
                 self.load_df_button.grid(row=8,column=1,sticky='se')
+                self.load_df_button_tip=CreateToolTip(self.load_df_button,f'''
+                Load your existing pandas dataframe, {self.MOSAIC.df_filename} \n\t 
+                 ''')
                 self.load_note=tk.Label(self.frame_table,text='3. \n Load df     ',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
                 self.load_note.grid(row=9,column=1,sticky='ne')
                 
@@ -4053,6 +4124,9 @@ class App:
             self.create_df_button.grid(row=6,column=1,sticky='se')
             self.create_note=tk.Label(self.frame_table,text='2. \n Create df    ',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
             self.create_note.grid(row=7,column=1,sticky='ne')
+            self.create_df_button_tip=CreateToolTip(self.create_df_button,'''
+            Create your pandas dataframe on your chosen Annotations/JPEGImages. \n\t 
+                ''')
             try:
                 self.open_originals_with_labelImg_note.destroy()
             except:
@@ -4071,6 +4145,9 @@ class App:
         self.save_settings_button.grid(row=22,column=1,sticky='se')
         self.save_settings_note=tk.Label(self.frame_table,text='Save Settings',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.save_settings_note.grid(row=23,column=1,sticky='ne')
+        self.save_settings_button_tip=CreateToolTip(self.save_settings_button,'''
+        Save your settings so it opens here next time you open the MOSIAC_Chip_Sorter.py \n\t 
+            ''')
 
     def play_video(self):
         self.open_video_label.destroy()
@@ -4333,11 +4410,17 @@ class App:
             if os.path.exists(self.MOSAIC.df_filename)==True:
                 self.load_df_button=Button(self.frame_table,image=self.icon_load,command=self.load_df,bg=self.root_bg,fg=self.root_fg)
                 self.load_df_button.grid(row=8,column=1,sticky='se')
+                self.load_df_button_tip=CreateToolTip(self.load_df_button,f'''
+                Load your existing pandas dataframe, {self.MOSAIC.df_filename}. \n\t 
+                 ''')
                 self.load_note=tk.Label(self.frame_table,text='3. \n Load df     ',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
                 self.load_note.grid(row=9,column=1,sticky='ne')
                 
             self.create_df_button=Button(self.frame_table,image=self.icon_create,command=self.create_df,bg=self.root_bg,fg=self.root_fg)
             self.create_df_button.grid(row=6,column=1,sticky='se')
+            self.create_df_button_tip=CreateToolTip(self.create_df_button,'''
+            Create your pandas dataframe on your chosen Annotations/JPEGImages. \n\t 
+                ''')
             self.create_note=tk.Label(self.frame_table,text='2. \n Create df    ',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
             self.create_note.grid(row=7,column=1,sticky='ne')
 
@@ -4419,17 +4502,97 @@ class App:
         self.DX=self.MOSAIC.DX
         self.DY=self.MOSAIC.DY
 
+    def update_targets_display(self):
+        self.label_counter_before={}
+        if len(self.MOSAIC.df)>0 and len(self.options)>0:
+            for class_i in self.options:
+                count_i=len(self.MOSAIC.df[self.MOSAIC.df.label_i==class_i])
+                self.label_counter_before[class_i]=count_i
+            sorted_list=sorted(self.label_counter_before.items(), key=lambda x:x[1],reverse=True)
+            self.label_counter_before=dict(sorted_list)
+        try:
+            if len(self.Label_dic)>0:
+                for item in self.Label_dic.values():
+                    try:
+                        item.destroy()
+                    except:
+                        pass
+        except:
+            pass
+        try:
+            if len(self.Count_dic)>0:
+                for item in self.Count_dic.values():
+                    try:
+                        item.destroy()
+                    except:
+                        pass
+        except:
+            pass
+        try:
+            if len(self.Perc_dic)>0:
+                for item in self.Perc_dic.values():
+                    try:
+                        item.destroy()
+                    except:
+                        pass
+        except:
+            pass
+
+        try:
+            self.LABEL_title.destroy()
+        except:
+            pass
+        try:
+            self.Count_title.destroy()
+        except:
+            pass
+        try:
+            self.Perc_title.destroy()
+        except:
+            pass
+
+        self.Label_dic={}
+        self.Count_dic={}
+        self.Perc_dic={}
+        i=13
+        j=-3
+        self.LABEL_title=tk.Label(self.frame_table,text='Label',bg='green',fg=self.root_bg,font=('Arial 14 underline'))
+        self.LABEL_title.grid(row=i,column=j+6,sticky='nw')
+        self.Count_title=tk.Label(self.frame_table,text='Count #',bg='green',fg=self.root_bg,font=('Arial 14 underline'))
+        self.Count_title.grid(row=i,column=j+7,sticky='nw')
+        self.Perc_title=tk.Label(self.frame_table,text='Percent %',bg='green',fg=self.root_bg,font=('Arial 14 underline'))
+        self.Perc_title.grid(row=i,column=j+8,sticky='nw')
+        total_count=sum(self.label_counter_before.values())
+
+        for label,count in self.label_counter_before.items():
+            self.Label_dic[label]=tk.Label(self.frame_table,text=label,bg=self.root_bg,fg=self.root_fg,font=('Arial 10 underline'))
+            self.Label_dic[label].grid(row=i+1,column=j+6,sticky='nw')
+            self.Count_dic[label]=tk.Label(self.frame_table,text=count,bg=self.root_bg,fg=self.root_fg,font=('Arial 10 bold'))
+            self.Count_dic[label].grid(row=i+1,column=j+7,sticky='nw')
+            self.Perc_dic[label]=tk.Label(self.frame_table,text=str(round(100*count/total_count,2))+'%',bg=self.root_bg,fg=self.root_fg,font=('Arial 10 italic'))
+            self.Perc_dic[label].grid(row=i+1,column=j+8,sticky='nw')
+            i+=1
 
     def update_targets(self):
         self.drop_targets.destroy()
         self.drop_targets=tk.OptionMenu(self.frame_table,self.target_i,*self.options,command=self.update_counts)
+        self.drop_targets.config(bg='red',fg='black')
+        self.drop_targets_tip=CreateToolTip(self.drop_targets,'''
+        Pick which class you want to inspect with a MOSAIC \n\t 
+            ''')
         self.drop_targets.grid(row=10,column=2,sticky='s')
+        self.update_targets_display()
+
+
     def create_df(self):
         self.MOSAIC=MOSAIC(self.path_JPEGImages,self.path_Annotations)
         self.MOSAIC.create_df()
         if os.path.exists(self.MOSAIC.df_filename)==True:
             self.load_df_button=Button(self.frame_table,image=self.icon_load,command=self.load_df,bg=self.root_bg,fg=self.root_fg)
             self.load_df_button.grid(row=8,column=1,sticky='se')
+            self.load_df_button_tip=CreateToolTip(self.load_df_button,f'''
+            Load your existing pandas dataframe, {self.MOSAIC.df_filename}. \n\t 
+            ''')
             self.load_note=tk.Label(self.frame_table,text='3. \n Load df     ',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
             self.load_note.grid(row=9,column=1,sticky='ne')
         self.load_df()
@@ -4442,6 +4605,9 @@ class App:
         self.MOSAIC_NUM_VAR.set(self.MOSAIC_NUM)
         self.MOSAIC_NUM_entry=tk.Entry(self.frame_table,textvariable=self.MOSAIC_NUM_VAR)
         self.MOSAIC_NUM_entry.grid(row=10,column=3,sticky='sw')
+        self.MOSAIC_NUM_entry_tip=CreateToolTip(self.MOSAIC_NUM_entry,'''
+        Pick how many tiles you want per MOSAIC. \n\t 
+        ''')
         self.MOSAIC_NUM_label=tk.Label(self.frame_table,text='MOSAIC_NUM',bg=self.root_bg,fg=self.root_fg,font=('Arial',7))
         self.MOSAIC_NUM_label.grid(row=11,column=3,sticky='nw')
 
@@ -4449,51 +4615,94 @@ class App:
         
         if self.drop_targets==None:
             self.drop_targets=tk.OptionMenu(self.frame_table,self.target_i,*self.options,command=self.update_counts)
+            self.drop_targets.config(bg='red',fg='black')
             self.drop_targets.grid(row=10,column=2,sticky='s')
             self.drop_label=tk.Label(self.frame_table,text='target',bg=self.root_bg,fg=self.root_fg,font=('Arial',7))
             self.drop_label.grid(row=11,column=2,sticky='nw')
+            self.drop_targets_tip=CreateToolTip(self.drop_targets,'''
+            Pick which class you want to inspect with a MOSAIC \n\t 
+            ''')
+            self.update_targets_display()
         else:
             self.update_targets()
         self.analyze_target_button=Button(self.frame_table,image=self.icon_analyze,command=self.analyze_target,bg=self.root_bg,fg=self.root_fg)
         self.analyze_target_button.grid(row=10,column=1,sticky='se')
+        self.analyze_target_button_tip=CreateToolTip(self.analyze_target_button,'''
+        Create the MOSAIC to analyze based on your class selection and number of tiles per MOSAIC \n\t 
+            ''')
         self.analyze_note=tk.Label(self.frame_table,text='4. \n Analyze Mosaic',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.analyze_note.grid(row=11,column=1,sticky='ne')
 
 
         self.move_fix_button=Button(self.frame_table,image=self.icon_move,command=self.move_fix,bg=self.root_bg,fg=self.root_fg)
         self.move_fix_button.grid(row=12,column=1,sticky='se')
+        self.move_fix_button_tip=CreateToolTip(self.move_fix_button,'''
+        This allows you to move any Annotation/JPEGImages you found as bad under analysis to independently modify with LabelImg.py for merging later. \n\t 
+
+        You will see that JPEGImages_tofix, Annotations_tofix folders etc are created for the independent move to inspect with.
+            ''')
         self.move_fix_note=tk.Label(self.frame_table,text='5. \n Move Fix',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.move_fix_note.grid(row=13,column=1,sticky='ne')
 
         self.fix_with_labelImg_button=Button(self.frame_table,image=self.icon_labelImg,command=self.fix_with_labelImg,bg=self.root_bg,fg=self.root_fg)
         self.fix_with_labelImg_button.grid(row=14,column=1,sticky='se')
+        self.fix_with_labelImg_button_tip=CreateToolTip(self.fix_with_labelImg_button,'''
+        This allows you fix with LabelImg.py whatever Annotations/JPEGImages you found BAD with the MOSAIC analysis tool. \n\t 
+
+        You will see that JPEGImages_tofix, Annotations_tofix folders etc are created for the independent move to inspect with.
+            ''')
         self.fix_labelImg_note=tk.Label(self.frame_table,text='6. \n Fix w/ labelImg.py',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.fix_labelImg_note.grid(row=15,column=1,sticky='ne')
 
 
         self.merge_fix_button=Button(self.frame_table,image=self.icon_merge,command=self.merge_fix,bg=self.root_bg,fg=self.root_fg)
         self.merge_fix_button.grid(row=16,column=1,sticky='se')
+        self.merge_fix_button_tip=CreateToolTip(self.merge_fix_button,'''
+        After changing whatever you deemed BAD with the MOSAIC analysis tool, using LabelImg.py to change or not change,
+        this merge will merge those Annotations you changed with the original Annotations you started with for a more accurate dataset
+        without having to recreate the pandas dataframe you originally had to create at the start.\n\t 
+
+            ''')
         self.merge_fix_note=tk.Label(self.frame_table,text='7. \n Merge Fix',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.merge_fix_note.grid(row=17,column=1,sticky='ne')
 
         self.clear_fix_button=Button(self.frame_table,image=self.icon_clear_fix,command=self.clear_fix,bg=self.root_bg,fg=self.root_fg)
         self.clear_fix_button.grid(row=18,column=1,sticky='se')
+        self.clear_fix_button_tip=CreateToolTip(self.clear_fix_button,'''
+        If you want to clear any items in your JPEGImages_tofix or Annotations_tofix directories, this will clean those. 
+            ''')
         self.clear_fix_note=tk.Label(self.frame_table,text='8. \n Clear Fix',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.clear_fix_note.grid(row=19,column=1,sticky='ne')
 
 
         self.clear_checked_button=Button(self.frame_table,image=self.icon_clear_checked,command=self.clear_checked,bg=self.root_bg,fg=self.root_fg)
         self.clear_checked_button.grid(row=20,column=1,sticky='se')
+        self.clear_checked_button_tip=CreateToolTip(self.clear_checked_button,'''
+        As you look through items with the MOSAIC tool, it will call them "GOOD" if you do not notice anything bad with them.
+        It will call items "BAD" if you do notice something wrong with them.
+        
+        This BUTTON allows you to reset what you have checked if you want to start over viewing with the MOSAIC analysis tool items per class. 
+            ''')
         self.clear_checked_note=tk.Label(self.frame_table,text='9. \n Clear Checked',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.clear_checked_note.grid(row=21,column=1,sticky='ne')
 
-        self.breakupDF_button=Button(self.frame_table,image=self.icon_breakup,command=self.breakup_df,bg=self.root_bg,fg=self.root_fg)
-        self.breakupDF_button.grid(row=20,column=30,sticky='se')
-        self.breakupDF_note=tk.Label(self.frame_table,text='10. \n Breakup df',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
-        self.breakupDF_note.grid(row=21,column=30,sticky='ne')
+        # self.breakupDF_button=Button(self.frame_table,image=self.icon_breakup,command=self.breakup_df,bg=self.root_bg,fg=self.root_fg)
+        # self.breakupDF_button.grid(row=20,column=30,sticky='se')
+        # self.breakupDF_note=tk.Label(self.frame_table,text='10. \n Breakup df',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
+        # self.breakupDF_note.grid(row=21,column=30,sticky='ne')
 
         self.UMAP_button=Button(self.frame_table,image=self.icon_map,command=self.umap_update,bg=self.root_bg,fg=self.root_fg)
         self.UMAP_button.grid(row=20,column=31,sticky='se')
+        self.UMAP_button_tip=CreateToolTip(self.UMAP_button,'''
+        This button creates a UMAP representation of your data.  
+        
+        You can modify your data with hotkey options that should display to you.
+
+        The first time you create a UMAP with your pandas dataframe, it might take longer than future button clicks here.
+        This is because the first time it has to do the UMAP fit_transform to your existing dataset.  
+        Future times, it uses the stored fit_transform embeddings to map out UMAP for your data.
+        
+            ''')
         self.UMAP_note=tk.Label(self.frame_table,text='11. \n UMAP',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.UMAP_note.grid(row=21,column=31,sticky='ne')
         try:
@@ -4513,12 +4722,18 @@ class App:
         self.DX_MIN_VAR.set(str(self.MOSAIC.DX_MIN))
         self.DX_MIN_entry=tk.Entry(self.frame_table,textvariable=self.DX_MIN_VAR)
         self.DX_MIN_entry.grid(row=5,column=30,sticky='sw')
+        self.DX_MIN_entry_tip=CreateToolTip(self.DX_MIN_entry,'''
+        This entry is for the minimum pixel in the DX range for viewing or clipping your dataset with.  
+            ''')
         self.DX_MIN_label=tk.Label(self.frame_table,text='DX_MIN',bg=self.root_bg,fg=self.root_fg,font=('Arial',7))
         self.DX_MIN_label.grid(row=6,column=30,sticky='nw')
 
         self.DX_MAX_VAR=tk.StringVar()
         self.DX_MAX_VAR.set(str(self.MOSAIC.DX_MAX))
         self.DX_MAX_entry=tk.Entry(self.frame_table,textvariable=self.DX_MAX_VAR)
+        self.DX_MAX_entry_tip=CreateToolTip(self.DX_MAX_entry,'''
+        This entry is for the maximum pixel in the DX range for viewing or clipping your dataset with.  
+            ''')
         self.DX_MAX_entry.grid(row=7,column=30,sticky='sw')
         self.DX_MAX_label=tk.Label(self.frame_table,text='DX_MAX',bg=self.root_bg,fg=self.root_fg,font=('Arial',7))
         self.DX_MAX_label.grid(row=8,column=30,sticky='nw')
@@ -4526,6 +4741,9 @@ class App:
         self.DY_MIN_VAR=tk.StringVar()
         self.DY_MIN_VAR.set(str(self.MOSAIC.DY_MIN))
         self.DY_MIN_entry=tk.Entry(self.frame_table,textvariable=self.DY_MIN_VAR)
+        self.DY_MIN_entry_tip=CreateToolTip(self.DY_MIN_entry,'''
+        This entry is for the minimum pixel in the DY range for viewing or clipping your dataset with.  
+            ''')
         self.DY_MIN_entry.grid(row=9,column=30,sticky='sw')
         self.DY_MIN_label=tk.Label(self.frame_table,text='DY_MIN',bg=self.root_bg,fg=self.root_fg,font=('Arial',7))
         self.DY_MIN_label.grid(row=10,column=30,sticky='nw')
@@ -4533,23 +4751,44 @@ class App:
         self.DY_MAX_VAR=tk.StringVar()
         self.DY_MAX_VAR.set(str(self.MOSAIC.DY_MAX))
         self.DY_MAX_entry=tk.Entry(self.frame_table,textvariable=self.DY_MAX_VAR)
+        self.DY_MAX_entry_tip=CreateToolTip(self.DY_MAX_entry,'''
+        This entry is for the maximum pixel in the DY range for viewing or clipping your dataset with.  
+            ''')
         self.DY_MAX_entry.grid(row=11,column=30,sticky='sw')
         self.DY_MAX_label=tk.Label(self.frame_table,text='DY_MAX',bg=self.root_bg,fg=self.root_fg,font=('Arial',7))
         self.DY_MAX_label.grid(row=12,column=30,sticky='nw')
 
         self.plot_DXDY_button=Button(self.frame_table,image=self.icon_scatter,command=self.MOSAIC.plot_dx_dy,bg=self.root_bg,fg=self.root_fg)
         self.plot_DXDY_button.grid(row=5,column=31,sticky='se')
+        self.plot_DXDY_button_tip=CreateToolTip(self.plot_DXDY_button,'''
+        This button will display the DX vs. DY pixels of your dataset (aka pixels on target).
+        
+        Hotkeys will be presented for you to change your dataset with.  
+            ''')
         self.plot_DXDY_note=tk.Label(self.frame_table,text='13. \n Plot DX vs. DY',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.plot_DXDY_note.grid(row=6,column=31,sticky='ne')
         #self.plot_dx_dy(self)
 
         self.plot_DXDY_filter_button=Button(self.frame_table,image=self.icon_filter,command=self.get_DXDY,bg=self.root_bg,fg=self.root_fg)
         self.plot_DXDY_filter_button.grid(row=7,column=31,sticky='se')
+        self.plot_DXDY_filter_button_tip=CreateToolTip(self.plot_DXDY_filter_button,'''
+        This button will remove annotations below or above the ranges set for DX & DY min/max in their entry fields. 
+        
+        The min/max range are set automatically so that if you click this button by accident, then it should not remove anything unless you changed those entries.
+        
+        The removal only removes their annotation from the .xml file, it does not add a BLACK chip to where it was located in the image.  So be aware that the object is present,
+        but without a label in its respective image.  
+        
+        You can use other tools like REMOVE_BLANKS to remove blank annotation files or CREATE_BLACK_CHIPS to add black chips to certain undesired annotations. 
+            ''')
         self.plot_DXDY_filter_note=tk.Label(self.frame_table,text='14. \n Filter DX,DY',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.plot_DXDY_filter_note.grid(row=8,column=31,sticky='ne')
 
         self.make_chips_button=Button(self.frame_table,image=self.icon_create,command=self.make_chips,bg=self.root_bg,fg=self.root_fg)
         self.make_chips_button.grid(row=9,column=31,sticky='se')
+        self.make_chips_button_tip=CreateToolTip(self.make_chips_button,'''
+        This button will create chips that can be used for training a classifier or visualizing the classes on a per chip basis from your annotation files.
+            ''')
         self.make_chips_note=tk.Label(self.frame_table,text='15. \n Make Chips',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.make_chips_note.grid(row=10,column=31,sticky='ne')
 
@@ -4559,31 +4798,58 @@ class App:
 
         self.change_labels_button=Button(self.frame_table,image=self.icon_create,command=self.change_labels,bg=self.root_bg,fg=self.root_fg)
         self.change_labels_button.grid(row=11,column=31,sticky='se')
+        self.change_labels_button_tip=CreateToolTip(self.change_labels_button,'''
+        This button will give you options to change the labels quickly of class names in your dataset.
+        
+        If you want to remove a class completely, just delete any text in the entry for that class after clicking this button.
+
+        Recommendation/FYI:
+        A good rule of thumb is to re-create your pandas dataframe after submitting anything that changes the labels.  
+        This helps ensure all the labels were changed correctly because you can click the dropdown to see what loaded.  
+        Also, this button might take 2 iterations to get all the labels changed correctly. 
+            ''')
         self.change_labels_note=tk.Label(self.frame_table,text='16. \n Change Labels',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.change_labels_note.grid(row=12,column=31,sticky='ne') 
 
         self.remove_blanks_button=Button(self.frame_table,image=self.icon_clear_fix,command=self.remove_blanks,bg=self.root_bg,fg=self.root_fg)
         self.remove_blanks_button.grid(row=13,column=31,sticky='se')
+        self.remove_blanks_button_tip=CreateToolTip(self.remove_blanks_button,'''
+        This button will remove annotation files that have no objects in them.
+            ''')
         self.remove_blanks_note=tk.Label(self.frame_table,text='17. \n Remove Blanks',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.remove_blanks_note.grid(row=14,column=31,sticky='ne')    
 
         self.look_at_objects_button=Button(self.frame_table,image=self.icon_analyze,command=self.look_at_objects,bg=self.root_bg,fg=self.root_fg)
         self.look_at_objects_button.grid(row=15,column=31,sticky='se')
+        self.look_at_objects_button_tip=CreateToolTip(self.look_at_objects_button,'''
+        This button will let you look at your dataset with a bounding box put on each box in their respective image.
+            ''')
         self.look_at_objects_note=tk.Label(self.frame_table,text='18. \n Look at Objects',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.look_at_objects_note.grid(row=16,column=31,sticky='ne') 
 
         self.create_new_df_button=Button(self.frame_table,image=self.icon_create,command=self.create_new_df,bg=self.root_bg,fg=self.root_fg)
         self.create_new_df_button.grid(row=17,column=31,sticky='se')
+        self.create_new_df_button_tip=CreateToolTip(self.create_new_df_button,'''
+        This button will create a copy of your existing dataset to a NEW_DATASET directory for you to work with.
+        
+        This can be useful if  you do not want to modify your existing original dataset, but want to make a new one with it.''')
         self.create_new_df_note=tk.Label(self.frame_table,text='19. \n Create New Dataset',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.create_new_df_note.grid(row=18,column=31,sticky='ne')       
 
         self.create_blackpatches_button=Button(self.frame_table,image=self.icon_create,command=self.create_blackpatches,bg=self.root_bg,fg=self.root_fg)
         self.create_blackpatches_button.grid(row=13,column=32,sticky='se')
+        self.create_blackpatches_button_tip=CreateToolTip(self.create_blackpatches_button,'''
+        This button will create blackpatches on whatever class you choose and remove the object bounding box from the xml file.
+        
+        This can be useful when trying to hide a certain target from making a dataset unbalanced.''')
         self.create_blackpatches_note=tk.Label(self.frame_table,text='20. \n Create Black Patches',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.create_blackpatches_note.grid(row=14,column=32,sticky='ne')   
 
         self.create_fakepatches_button=Button(self.frame_table,image=self.icon_create,command=self.create_fakepatches,bg=self.root_bg,fg=self.root_fg)
         self.create_fakepatches_button.grid(row=17,column=32,sticky='se')
+        self.create_fakepatches_button_tip=CreateToolTip(self.create_fakepatches_button,'''
+        This button will take your entire dataset and all the objects in them and pasted them into at random whatever images you have 
+        in the FAKE_BACKGROUND_IMAGES directory.''')
         self.create_fakepatches_note=tk.Label(self.frame_table,text='21. \n Create New Dataset \n with Random Backgrounds',bg=self.root_bg,fg=self.root_fg,font=("Arial", 9))
         self.create_fakepatches_note.grid(row=18,column=32,sticky='ne') 
 
